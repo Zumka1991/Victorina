@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: victorina-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: victorina
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  bot:
+    build:
+      context: .
+      dockerfile: src/Victorina.Bot/Dockerfile
+    container_name: victorina-bot
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=victorina;Username=postgres;Password=postgres
+      - Bot__BotToken=${BOT_TOKEN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Victorina.Api/Dockerfile
+    container_name: victorina-api
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=victorina;Username=postgres;Password=postgres
+      - ASPNETCORE_URLS=http://+:80
+    ports:
+      - "5000:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

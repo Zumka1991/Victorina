@@ -1,0 +1,55 @@
+import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import Dashboard from './pages/Dashboard';
+import Categories from './pages/Categories';
+import Questions from './pages/Questions';
+import Settings from './pages/Settings';
+import './App.css';
+
+const queryClient = new QueryClient();
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <div className="app">
+          <nav className="sidebar">
+            <h1>🎯 Викторина</h1>
+            <ul>
+              <li>
+                <NavLink to="/" className={({ isActive }) => isActive ? 'active' : ''}>
+                  📊 Дашборд
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/categories" className={({ isActive }) => isActive ? 'active' : ''}>
+                  📁 Категории
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/questions" className={({ isActive }) => isActive ? 'active' : ''}>
+                  ❓ Вопросы
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/settings" className={({ isActive }) => isActive ? 'active' : ''}>
+                  ⚙️ Настройки
+                </NavLink>
+              </li>
+            </ul>
+          </nav>
+          <main className="content">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/questions" element={<Questions />} />
+              <Route path="/settings" element={<Settings />} />
+            </Routes>
+          </main>
+        </div>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+}
+
+export default App;

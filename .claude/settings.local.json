@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet new:*)",
+      "Bash(export PATH=\"$PATH:$HOME/.dotnet\")",
+      "Bash(dotnet --version:*)",
+      "Bash(mkdir:*)",
+      "Bash(dotnet sln add:*)",
+      "Bash(rm:*)",
+      "Bash(export PATH=$PATH:$HOME/.dotnet)",
+      "Bash(dotnet nuget search:*)",
+      "Bash(dotnet --list-sdks:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(export PATH=\"$PATH:$HOME/.dotnet:$HOME/.dotnet/tools\")",
+      "Bash(dotnet tool install:*)",
+      "Bash(export DOTNET_ROOT=\"$HOME/.dotnet\")",
+      "Bash(export PATH=\"$HOME/.nvm/versions/node/v22.21.1/bin:$PATH\")",
+      "Bash(npm --version:*)",
+      "Bash(node --version:*)",
+      "Bash(npm create:*)",
+      "Bash(npm install)",
+      "Bash(npm run build:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Victorina.Api/Victorina.Api.csproj" />
+    <Project Path="src/Victorina.Application/Victorina.Application.csproj" />
+    <Project Path="src/Victorina.Bot/Victorina.Bot.csproj" />
+    <Project Path="src/Victorina.Domain/Victorina.Domain.csproj" />
+    <Project Path="src/Victorina.Infrastructure/Victorina.Infrastructure.csproj" />
+  </Folder>
+</Solution>
