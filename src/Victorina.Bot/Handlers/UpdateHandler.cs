@@ -109,6 +109,10 @@ public class UpdateHandler
                 await HandleStatisticsReplyAsync(chatId, telegramUser.Id, gameService, ct);
                 break;
 
+            case "🏆 Лидеры":
+                await HandleLeaderboardReplyAsync(chatId, telegramUser.Id, gameService, ct);
+                break;
+
             case "👥 Друзья":
                 await SendFriendsMenu(chatId, ct);
                 break;
@@ -250,6 +254,52 @@ public class UpdateHandler
             $"🏆 Побед: *{stats.GamesWon}*\n" +
             $"📈 Процент побед: *{stats.WinRate:F1}%*\n" +
             $"✅ Правильных ответов: *{stats.TotalCorrectAnswers}*",
+            parseMode: ParseMode.Markdown,
+            replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+            cancellationToken: ct);
+    }
+
+    private async Task HandleLeaderboardReplyAsync(long chatId, long telegramId,
+        IGameService gameService, CancellationToken ct)
+    {
+        var leaderboard = await gameService.GetLeaderboardAsync(10);
+        var userRank = await gameService.GetUserRankAsync(telegramId);
+
+        if (leaderboard.Count == 0)
+        {
+            await _bot.SendMessage(chatId,
+                "🏆 *Таблица лидеров*\n\nПока нет игроков с завершёнными играми.\n\nСыграйте первую игру!",
+                parseMode: ParseMode.Markdown,
+                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+                cancellationToken: ct);
+            return;
+        }
+
+        var medals = new[] { "🥇", "🥈", "🥉" };
+        var message = "🏆 *Таблица лидеров*\n\n";
+
+        foreach (var entry in leaderboard)
+        {
+            var medal = entry.Rank <= 3 ? medals[entry.Rank - 1] : $"{entry.Rank}.";
+            var name = !string.IsNullOrEmpty(entry.Username) ? $"@{entry.Username}" : entry.FirstName ?? "Игрок";
+            message += $"{medal} *{name}*\n" +
+                      $"    🏆 {entry.GamesWon} побед • 🎮 {entry.GamesPlayed} игр • {entry.WinRate:F0}%\n\n";
+        }
+
+        if (userRank.HasValue)
+        {
+            message += $"━━━━━━━━━━━━━━━\n" +
+                      $"📍 *Ваша позиция:* #{userRank.Value.Rank}\n" +
+                      $"🏆 {userRank.Value.Stats.GamesWon} побед из {userRank.Value.Stats.GamesPlayed} игр";
+        }
+        else
+        {
+            message += $"━━━━━━━━━━━━━━━\n" +
+                      $"📍 Сыграйте игру, чтобы попасть в рейтинг!";
+        }
+
+        await _bot.SendMessage(chatId,
+            message,
             parseMode: ParseMode.Markdown,
             replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
             cancellationToken: ct);

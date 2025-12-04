@@ -208,6 +208,64 @@ app.MapGet("/api/stats/top-players", async (VictorinaDbContext db, int count = 1
     return Results.Ok(topPlayers);
 }).WithTags("Statistics");
 
+// Leaderboard
+app.MapGet("/api/leaderboard", async (VictorinaDbContext db, string sort = "wins", int page = 1, int pageSize = 20) =>
+{
+    var query = db.Users.Where(u => u.GamesPlayed > 0);
+
+    query = sort switch
+    {
+        "winrate" => query.OrderByDescending(u => u.GamesPlayed > 0 ? (double)u.GamesWon / u.GamesPlayed : 0)
+                          .ThenByDescending(u => u.GamesWon),
+        "games" => query.OrderByDescending(u => u.GamesPlayed),
+        "correct" => query.OrderByDescending(u => u.TotalCorrectAnswers),
+        _ => query.OrderByDescending(u => u.GamesWon)
+    };
+
+    var total = await query.CountAsync();
+    var players = await query
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(u => new
+        {
+            u.Id,
+            u.TelegramId,
+            u.Username,
+            u.FirstName,
+            u.LastName,
+            u.GamesPlayed,
+            u.GamesWon,
+            u.TotalCorrectAnswers,
+            WinRate = u.GamesPlayed > 0 ? Math.Round((double)u.GamesWon / u.GamesPlayed * 100, 1) : 0
+        })
+        .ToListAsync();
+
+    return Results.Ok(new { Items = players, Total = total, Page = page, PageSize = pageSize });
+}).WithTags("Leaderboard");
+
+app.MapGet("/api/leaderboard/user/{telegramId}", async (VictorinaDbContext db, long telegramId) =>
+{
+    var user = await db.Users.FirstOrDefaultAsync(u => u.TelegramId == telegramId);
+    if (user == null) return Results.NotFound();
+
+    var rank = await db.Users
+        .CountAsync(u => u.GamesWon > user.GamesWon ||
+                        (u.GamesWon == user.GamesWon && u.GamesPlayed < user.GamesPlayed));
+
+    return Results.Ok(new
+    {
+        user.Id,
+        user.TelegramId,
+        user.Username,
+        user.FirstName,
+        user.GamesPlayed,
+        user.GamesWon,
+        user.TotalCorrectAnswers,
+        WinRate = user.GamesPlayed > 0 ? Math.Round((double)user.GamesWon / user.GamesPlayed * 100, 1) : 0,
+        Rank = rank + 1
+    });
+}).WithTags("Leaderboard");
+
 // Settings
 app.MapGet("/api/settings", async (VictorinaDbContext db) =>
 {

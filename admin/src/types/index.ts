@@ -40,3 +40,16 @@ export interface PaginatedResponse<T> {
   page: number;
   pageSize: number;
 }
+
+export interface LeaderboardPlayer {
+  id: number;
+  telegramId: number;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  gamesPlayed: number;
+  gamesWon: number;
+  totalCorrectAnswers: number;
+  winRate: number;
+  lastActivityAt?: string;
+}

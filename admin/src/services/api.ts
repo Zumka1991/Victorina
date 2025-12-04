@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Category, Question, Stats, GameSetting, PaginatedResponse } from '../types';
+import type { Category, Question, Stats, GameSetting, PaginatedResponse, LeaderboardPlayer } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5175';
 
@@ -52,3 +52,9 @@ export const seedData = () =>
 
 export const resetSeedData = () =>
   api.post('/api/seed/reset').then(res => res.data);
+
+// Leaderboard
+export const getLeaderboard = (sort = 'wins', page = 1, pageSize = 20) =>
+  api.get<PaginatedResponse<LeaderboardPlayer>>('/api/leaderboard', {
+    params: { sort, page, pageSize }
+  }).then(res => res.data);

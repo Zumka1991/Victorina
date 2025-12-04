@@ -20,7 +20,8 @@
       "Bash(node --version:*)",
       "Bash(npm create:*)",
       "Bash(npm install)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

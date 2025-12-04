@@ -13,8 +13,8 @@ public class KeyboardService
         return new ReplyKeyboardMarkup(new[]
         {
             new KeyboardButton[] { "🎮 Играть" },
-            new KeyboardButton[] { "📊 Статистика", "👥 Друзья" },
-            new KeyboardButton[] { "❓ Помощь" }
+            new KeyboardButton[] { "📊 Статистика", "🏆 Лидеры" },
+            new KeyboardButton[] { "👥 Друзья", "❓ Помощь" }
         })
         {
             ResizeKeyboard = true,

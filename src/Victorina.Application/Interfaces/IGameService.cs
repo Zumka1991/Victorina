@@ -18,10 +18,24 @@ public interface IGameService
     Task<GameResult?> FinishGameAsync(int gameId);
     Task CancelGameAsync(int gameId);
     Task<UserStats> GetUserStatsAsync(long telegramId);
+    Task<List<LeaderboardEntry>> GetLeaderboardAsync(int count = 10);
+    Task<(int Rank, UserStats Stats)?> GetUserRankAsync(long telegramId);
 }
 
 public class UserStats
 {
+    public int GamesPlayed { get; set; }
+    public int GamesWon { get; set; }
+    public int TotalCorrectAnswers { get; set; }
+    public double WinRate => GamesPlayed > 0 ? (double)GamesWon / GamesPlayed * 100 : 0;
+}
+
+public class LeaderboardEntry
+{
+    public int Rank { get; set; }
+    public long TelegramId { get; set; }
+    public string? Username { get; set; }
+    public string? FirstName { get; set; }
     public int GamesPlayed { get; set; }
     public int GamesWon { get; set; }
     public int TotalCorrectAnswers { get; set; }

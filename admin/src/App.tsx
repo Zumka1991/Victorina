@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Dashboard from './pages/Dashboard';
 import Categories from './pages/Categories';
 import Questions from './pages/Questions';
+import Leaderboard from './pages/Leaderboard';
 import Settings from './pages/Settings';
 import './App.css';
 
@@ -32,6 +33,11 @@ function App() {
                 </NavLink>
               </li>
               <li>
+                <NavLink to="/leaderboard" className={({ isActive }) => isActive ? 'active' : ''}>
+                  🏆 Лидеры
+                </NavLink>
+              </li>
+              <li>
                 <NavLink to="/settings" className={({ isActive }) => isActive ? 'active' : ''}>
                   ⚙️ Настройки
                 </NavLink>
@@ -43,6 +49,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/questions" element={<Questions />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>
           </main>

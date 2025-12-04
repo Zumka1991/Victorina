@@ -528,6 +528,46 @@ public class GameService : IGameService
         };
     }
 
+    public async Task<List<LeaderboardEntry>> GetLeaderboardAsync(int count = 10)
+    {
+        var topPlayers = await _context.Users
+            .Where(u => u.GamesPlayed > 0)
+            .OrderByDescending(u => u.GamesWon)
+            .ThenByDescending(u => u.GamesPlayed > 0 ? (double)u.GamesWon / u.GamesPlayed : 0)
+            .ThenBy(u => u.GamesPlayed)
+            .Take(count)
+            .ToListAsync();
+
+        return topPlayers.Select((u, index) => new LeaderboardEntry
+        {
+            Rank = index + 1,
+            TelegramId = u.TelegramId,
+            Username = u.Username,
+            FirstName = u.FirstName,
+            GamesPlayed = u.GamesPlayed,
+            GamesWon = u.GamesWon,
+            TotalCorrectAnswers = u.TotalCorrectAnswers
+        }).ToList();
+    }
+
+    public async Task<(int Rank, UserStats Stats)?> GetUserRankAsync(long telegramId)
+    {
+        var user = await _userService.GetByTelegramIdAsync(telegramId);
+        if (user == null || user.GamesPlayed == 0)
+            return null;
+
+        var rank = await _context.Users
+            .CountAsync(u => u.GamesWon > user.GamesWon ||
+                            (u.GamesWon == user.GamesWon && u.GamesPlayed < user.GamesPlayed));
+
+        return (rank + 1, new UserStats
+        {
+            GamesPlayed = user.GamesPlayed,
+            GamesWon = user.GamesWon,
+            TotalCorrectAnswers = user.TotalCorrectAnswers
+        });
+    }
+
     private async Task<(int QuestionTimeSeconds, int QuestionsCount)> GetGameSettingsAsync()
     {
         var timeSettings = await _context.GameSettings
