@@ -37,6 +37,10 @@ public static class CallbackData
     // Профиль
     public const string SelectCountry = "country_";
     public const string BackToProfile = "back_profile";
+
+    // Категории
+    public const string SelectCategory = "cat_";
+    public const string SelectCategoryForFriend = "catf_";
 }
 
 public static class BotMessages

@@ -6,6 +6,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 using Victorina.Application.Interfaces;
 using Victorina.Bot.Constants;
 using Victorina.Bot.Services;
+using Victorina.Domain.Entities;
 using Victorina.Domain.Enums;
 
 namespace Victorina.Bot.Handlers;
@@ -60,6 +61,7 @@ public class UpdateHandler
         var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
         var gameService = scope.ServiceProvider.GetRequiredService<IGameService>();
         var friendshipService = scope.ServiceProvider.GetRequiredService<IFriendshipService>();
+        var questionService = scope.ServiceProvider.GetRequiredService<IQuestionService>();
 
         var telegramUser = message.From!;
         var user = await userService.GetOrCreateUserAsync(
@@ -102,7 +104,7 @@ public class UpdateHandler
                 break;
 
             case "⚡ Быстрая игра":
-                await HandleQuickGameReplyAsync(chatId, telegramUser.Id, gameService, ct);
+                await SendCategorySelectionAsync(chatId, questionService, false, null, ct);
                 break;
 
             case "👤 Играть с другом":
@@ -221,8 +223,23 @@ public class UpdateHandler
             cancellationToken: ct);
     }
 
+    private async Task SendCategorySelectionAsync(long chatId, IQuestionService questionService,
+        bool forFriend, int? friendId, CancellationToken ct)
+    {
+        var categories = await questionService.GetCategoriesAsync();
+        var message = forFriend
+            ? "📚 *Выберите категорию для игры с другом:*"
+            : "📚 *Выберите категорию:*";
+
+        await _bot.SendMessage(chatId,
+            message,
+            parseMode: ParseMode.Markdown,
+            replyMarkup: _keyboard.GetCategorySelectionKeyboard(categories, forFriend, friendId),
+            cancellationToken: ct);
+    }
+
     private async Task HandleQuickGameReplyAsync(long chatId, long telegramId,
-        IGameService gameService, CancellationToken ct)
+        int? categoryId, IGameService gameService, CancellationToken ct)
     {
         var activeGame = await gameService.GetActiveGameAsync(telegramId);
         if (activeGame != null)
@@ -234,7 +251,7 @@ public class UpdateHandler
             return;
         }
 
-        var session = await gameService.FindQuickGameAsync(telegramId);
+        var session = await gameService.FindQuickGameAsync(telegramId, categoryId);
 
         if (session != null)
         {
@@ -247,23 +264,32 @@ public class UpdateHandler
             var currentPlayerFlag = CountryService.GetFlag(currentPlayer.CountryCode);
             var currentPlayerName = currentPlayer.GetDisplayName();
 
+            var categoryInfo = session.CategoryName != null
+                ? $"\n📚 Категория: *{session.CategoryName}*"
+                : "";
+
             await _bot.SendMessage(chatId,
-                $"🎮 *Соперник найден!*\n\n{opponentFlag} *{opponentName}*\n\nНажмите «Готов» чтобы начать!",
+                $"🎮 *Соперник найден!*\n\n{opponentFlag} *{opponentName}*{categoryInfo}\n\nНажмите «Готов» чтобы начать!",
                 parseMode: ParseMode.Markdown,
                 replyMarkup: _keyboard.GetReadyKeyboard(),
                 cancellationToken: ct);
 
             await _bot.SendMessage(opponent.TelegramId,
-                $"🎮 *Соперник найден!*\n\n{currentPlayerFlag} *{currentPlayerName}*\n\nНажмите «Готов» чтобы начать!",
+                $"🎮 *Соперник найден!*\n\n{currentPlayerFlag} *{currentPlayerName}*{categoryInfo}\n\nНажмите «Готов» чтобы начать!",
                 parseMode: ParseMode.Markdown,
                 replyMarkup: _keyboard.GetReadyKeyboard(),
                 cancellationToken: ct);
         }
         else
         {
-            await gameService.CreateQuickGameAsync(telegramId);
+            await gameService.CreateQuickGameAsync(telegramId, categoryId);
+
+            var waitingText = categoryId.HasValue
+                ? "🔍 *Ищем соперника в этой категории...*\n\nПодождите, пока кто-то присоединится."
+                : "🔍 *Ищем соперника...*\n\nПодождите, пока кто-то присоединится.";
+
             await _bot.SendMessage(chatId,
-                "🔍 *Ищем соперника...*\n\nПодождите, пока кто-то присоединится.",
+                waitingText,
                 parseMode: ParseMode.Markdown,
                 replyMarkup: _keyboard.GetSearchingKeyboard(),
                 cancellationToken: ct);
@@ -423,6 +449,7 @@ public class UpdateHandler
         var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
         var gameService = scope.ServiceProvider.GetRequiredService<IGameService>();
         var friendshipService = scope.ServiceProvider.GetRequiredService<IFriendshipService>();
+        var questionService = scope.ServiceProvider.GetRequiredService<IQuestionService>();
 
         var user = await userService.GetOrCreateUserAsync(
             callback.From.Id,
@@ -435,7 +462,7 @@ public class UpdateHandler
             switch (data)
             {
                 case CallbackData.QuickGame:
-                    await HandleQuickGameReplyAsync(chatId, telegramId, gameService, ct);
+                    await SendCategorySelectionAsync(chatId, questionService, false, null, ct);
                     break;
 
                 case CallbackData.CheckGame:
@@ -472,7 +499,16 @@ public class UpdateHandler
                     break;
 
                 default:
-                    if (data.StartsWith(CallbackData.SelectCountry))
+                    if (data.StartsWith(CallbackData.SelectCategory))
+                    {
+                        await HandleSelectCategoryAsync(chatId, messageId, telegramId, data, gameService, ct);
+                    }
+                    else if (data.StartsWith(CallbackData.SelectCategoryForFriend))
+                    {
+                        await HandleSelectCategoryForFriendAsync(chatId, messageId, telegramId, data,
+                            gameService, userService, ct);
+                    }
+                    else if (data.StartsWith(CallbackData.SelectCountry))
                     {
                         await HandleSelectCountryAsync(chatId, messageId, user.Id, data, userService, ct);
                     }
@@ -491,7 +527,7 @@ public class UpdateHandler
                     else if (data.StartsWith(CallbackData.InviteFriend))
                     {
                         await HandleInviteFriendAsync(chatId, messageId, telegramId, user.Id, data,
-                            gameService, userService, ct);
+                            gameService, userService, questionService, ct);
                     }
                     break;
             }
@@ -823,7 +859,8 @@ public class UpdateHandler
     }
 
     private async Task HandleInviteFriendAsync(long chatId, int messageId, long telegramId, int userId,
-        string data, IGameService gameService, IUserService userService, CancellationToken ct)
+        string data, IGameService gameService, IUserService userService, IQuestionService questionService,
+        CancellationToken ct)
     {
         var friendId = int.Parse(data.Replace(CallbackData.InviteFriend, ""));
         var friend = await userService.GetByIdAsync(friendId);
@@ -837,18 +874,76 @@ public class UpdateHandler
             return;
         }
 
-        var session = await gameService.CreateFriendGameAsync(telegramId, friend.TelegramId);
+        // Показываем выбор категории для игры с другом
+        await SendCategorySelectionAsync(chatId, questionService, true, friendId, ct);
+    }
+
+    private async Task HandleSelectCategoryAsync(long chatId, int messageId, long telegramId,
+        string data, IGameService gameService, CancellationToken ct)
+    {
+        // cat_0 = любая категория, cat_1 = категория с id 1
+        var categoryIdStr = data.Replace(CallbackData.SelectCategory, "");
+        int? categoryId = int.TryParse(categoryIdStr, out var id) && id > 0 ? id : null;
+
+        await _bot.EditMessageText(chatId, messageId,
+            categoryId.HasValue ? "🔍 Ищем соперника в выбранной категории..." : "🔍 Ищем соперника...",
+            cancellationToken: ct);
+
+        await HandleQuickGameReplyAsync(chatId, telegramId, categoryId, gameService, ct);
+    }
+
+    private async Task HandleSelectCategoryForFriendAsync(long chatId, int messageId, long telegramId,
+        string data, IGameService gameService, IUserService userService, CancellationToken ct)
+    {
+        // catf_123_0 = friend id 123, любая категория
+        // catf_123_1 = friend id 123, категория с id 1
+        var parts = data.Replace(CallbackData.SelectCategoryForFriend, "").Split('_');
+        if (parts.Length < 2) return;
+
+        var friendId = int.Parse(parts[0]);
+        int? categoryId = int.TryParse(parts[1], out var id) && id > 0 ? id : null;
+
+        var friend = await userService.GetByIdAsync(friendId);
+        if (friend == null)
+        {
+            await _bot.SendMessage(chatId,
+                "❌ Пользователь не найден.",
+                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+                cancellationToken: ct);
+            return;
+        }
+
+        var session = await gameService.CreateFriendGameAsync(telegramId, friend.TelegramId, categoryId);
+
+        var categoryInfo = session.CategoryName != null
+            ? $"\n📚 Категория: *{session.CategoryName}*"
+            : "";
+
+        await _bot.EditMessageText(chatId, messageId,
+            $"📨 Приглашение отправлено!{categoryInfo}\n\nОжидаем ответа...",
+            parseMode: ParseMode.Markdown,
+            cancellationToken: ct);
 
         await _bot.SendMessage(chatId,
-            "📨 Приглашение отправлено! Ожидаем ответа...",
+            "Нажмите «Готов» когда друг примет приглашение.",
             replyMarkup: _keyboard.GetReadyKeyboard(),
             cancellationToken: ct);
 
         var inviter = await userService.GetByTelegramIdAsync(telegramId);
-        var inviterName = inviter?.Username ?? inviter?.FirstName ?? "Друг";
+        var inviterFlag = CountryService.GetFlag(inviter?.CountryCode);
+        var inviterName = inviter != null
+            ? $"{inviterFlag} {inviter.FirstName ?? ""} {inviter.LastName ?? ""}".Trim()
+            : "Друг";
+
+        if (!string.IsNullOrEmpty(inviter?.Username))
+            inviterName += $" (@{inviter.Username})";
+
+        var inviteCategoryInfo = session.CategoryName != null
+            ? $"\n📚 Категория: *{session.CategoryName}*"
+            : "";
 
         await _bot.SendMessage(friend.TelegramId,
-            $"🎮 *{inviterName}* приглашает вас в игру!",
+            $"🎮 *{inviterName}* приглашает вас в игру!{inviteCategoryInfo}",
             parseMode: ParseMode.Markdown,
             replyMarkup: _keyboard.GetReadyKeyboard(),
             cancellationToken: ct);

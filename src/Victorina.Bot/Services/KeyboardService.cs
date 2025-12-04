@@ -251,4 +251,43 @@ public class KeyboardService
             }
         });
     }
+
+    public InlineKeyboardMarkup GetCategorySelectionKeyboard(IList<Category> categories, bool forFriend = false, int? friendId = null)
+    {
+        var prefix = forFriend ? $"{CallbackData.SelectCategoryForFriend}{friendId}_" : CallbackData.SelectCategory;
+        var buttons = new List<InlineKeyboardButton[]>();
+
+        // Кнопка "Любая категория"
+        buttons.Add(new[]
+        {
+            InlineKeyboardButton.WithCallbackData("🎲 Любая категория", $"{prefix}0")
+        });
+
+        // Категории по 2 в ряд
+        for (int i = 0; i < categories.Count; i += 2)
+        {
+            var row = new List<InlineKeyboardButton>();
+            var cat1 = categories[i];
+            row.Add(InlineKeyboardButton.WithCallbackData(
+                $"{cat1.Emoji ?? "📚"} {cat1.Name}",
+                $"{prefix}{cat1.Id}"));
+
+            if (i + 1 < categories.Count)
+            {
+                var cat2 = categories[i + 1];
+                row.Add(InlineKeyboardButton.WithCallbackData(
+                    $"{cat2.Emoji ?? "📚"} {cat2.Name}",
+                    $"{prefix}{cat2.Id}"));
+            }
+
+            buttons.Add(row.ToArray());
+        }
+
+        buttons.Add(new[]
+        {
+            InlineKeyboardButton.WithCallbackData("🔙 Назад", CallbackData.BackToMenu)
+        });
+
+        return new InlineKeyboardMarkup(buttons);
+    }
 }

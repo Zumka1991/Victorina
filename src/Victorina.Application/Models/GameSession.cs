@@ -8,6 +8,8 @@ public class GameSession
     public Guid GameGuid { get; set; }
     public GameStatus Status { get; set; }
     public GameType Type { get; set; }
+    public int? CategoryId { get; set; }
+    public string? CategoryName { get; set; }
     public int QuestionTimeSeconds { get; set; }
     public List<GameSessionQuestion> Questions { get; set; } = new();
     public Dictionary<long, PlayerSession> Players { get; set; } = new();

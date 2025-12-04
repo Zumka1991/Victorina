@@ -5,9 +5,9 @@ namespace Victorina.Application.Interfaces;
 
 public interface IGameService
 {
-    Task<GameSession?> FindQuickGameAsync(long telegramId);
-    Task<GameSession> CreateQuickGameAsync(long telegramId);
-    Task<GameSession> CreateFriendGameAsync(long creatorTelegramId, long friendTelegramId);
+    Task<GameSession?> FindQuickGameAsync(long telegramId, int? categoryId = null);
+    Task<GameSession> CreateQuickGameAsync(long telegramId, int? categoryId = null);
+    Task<GameSession> CreateFriendGameAsync(long creatorTelegramId, long friendTelegramId, int? categoryId = null);
     Task<GameSession?> JoinGameAsync(int gameId, long telegramId);
     Task<bool> SetPlayerReadyAsync(int gameId, long telegramId);
     Task<GameSession?> GetActiveGameAsync(long telegramId);

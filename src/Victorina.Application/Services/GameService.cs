@@ -27,26 +27,35 @@ public class GameService : IGameService
         _questionService = questionService;
     }
 
-    public async Task<GameSession?> FindQuickGameAsync(long telegramId)
+    public async Task<GameSession?> FindQuickGameAsync(long telegramId, int? categoryId = null)
     {
         var waitingSession = _sessionStore.GetWaitingSessions()
-            .FirstOrDefault(s => !s.Players.ContainsKey(telegramId));
+            .FirstOrDefault(s => !s.Players.ContainsKey(telegramId) &&
+                                 s.CategoryId == categoryId);
 
         return waitingSession;
     }
 
-    public async Task<GameSession> CreateQuickGameAsync(long telegramId)
+    public async Task<GameSession> CreateQuickGameAsync(long telegramId, int? categoryId = null)
     {
         var user = await _userService.GetByTelegramIdAsync(telegramId);
         if (user == null) throw new InvalidOperationException("User not found");
 
         var settings = await GetGameSettingsAsync();
-        var questions = await _questionService.GetRandomQuestionsAsync(settings.QuestionsCount);
+        var questions = await _questionService.GetRandomQuestionsAsync(settings.QuestionsCount, categoryId);
+
+        string? categoryName = null;
+        if (categoryId.HasValue)
+        {
+            var category = await _context.Categories.FindAsync(categoryId.Value);
+            categoryName = category?.Name;
+        }
 
         var game = new Game
         {
             Type = GameType.QuickGame,
             Status = GameStatus.WaitingForPlayers,
+            CategoryId = categoryId,
             QuestionTimeSeconds = settings.QuestionTimeSeconds,
             TotalQuestions = settings.QuestionsCount,
             CreatedAt = DateTime.UtcNow
@@ -87,6 +96,8 @@ public class GameService : IGameService
             GameGuid = game.GameGuid,
             Status = GameStatus.WaitingForPlayers,
             Type = GameType.QuickGame,
+            CategoryId = categoryId,
+            CategoryName = categoryName,
             QuestionTimeSeconds = settings.QuestionTimeSeconds,
             CreatedAt = DateTime.UtcNow,
             Questions = gameQuestions.Select((gq, idx) =>
@@ -123,7 +134,7 @@ public class GameService : IGameService
         return session;
     }
 
-    public async Task<GameSession> CreateFriendGameAsync(long creatorTelegramId, long friendTelegramId)
+    public async Task<GameSession> CreateFriendGameAsync(long creatorTelegramId, long friendTelegramId, int? categoryId = null)
     {
         var creator = await _userService.GetByTelegramIdAsync(creatorTelegramId);
         var friend = await _userService.GetByTelegramIdAsync(friendTelegramId);
@@ -132,12 +143,20 @@ public class GameService : IGameService
             throw new InvalidOperationException("User not found");
 
         var settings = await GetGameSettingsAsync();
-        var questions = await _questionService.GetRandomQuestionsAsync(settings.QuestionsCount);
+        var questions = await _questionService.GetRandomQuestionsAsync(settings.QuestionsCount, categoryId);
+
+        string? categoryName = null;
+        if (categoryId.HasValue)
+        {
+            var category = await _context.Categories.FindAsync(categoryId.Value);
+            categoryName = category?.Name;
+        }
 
         var game = new Game
         {
             Type = GameType.FriendGame,
             Status = GameStatus.WaitingForPlayers,
+            CategoryId = categoryId,
             QuestionTimeSeconds = settings.QuestionTimeSeconds,
             TotalQuestions = settings.QuestionsCount,
             CreatedAt = DateTime.UtcNow
@@ -175,6 +194,8 @@ public class GameService : IGameService
             GameGuid = game.GameGuid,
             Status = GameStatus.WaitingForPlayers,
             Type = GameType.FriendGame,
+            CategoryId = categoryId,
+            CategoryName = categoryName,
             QuestionTimeSeconds = settings.QuestionTimeSeconds,
             CreatedAt = DateTime.UtcNow,
             Questions = gameQuestions.Select((gq, idx) =>
