@@ -240,15 +240,21 @@ public class UpdateHandler
         {
             session = await gameService.JoinGameAsync(session.GameId, telegramId);
             var opponent = session!.Players.Values.First(p => p.TelegramId != telegramId);
+            var currentPlayer = session.Players.Values.First(p => p.TelegramId == telegramId);
+
+            var opponentFlag = CountryService.GetFlag(opponent.CountryCode);
+            var opponentName = opponent.GetDisplayName();
+            var currentPlayerFlag = CountryService.GetFlag(currentPlayer.CountryCode);
+            var currentPlayerName = currentPlayer.GetDisplayName();
 
             await _bot.SendMessage(chatId,
-                $"🎮 *Соперник найден!*\n\n👤 Вы vs 👤 {opponent.Username}\n\nНажмите «Готов» чтобы начать!",
+                $"🎮 *Соперник найден!*\n\n{opponentFlag} *{opponentName}*\n\nНажмите «Готов» чтобы начать!",
                 parseMode: ParseMode.Markdown,
                 replyMarkup: _keyboard.GetReadyKeyboard(),
                 cancellationToken: ct);
 
             await _bot.SendMessage(opponent.TelegramId,
-                $"🎮 *Соперник найден!*\n\n👤 Вы vs 👤 Соперник\n\nНажмите «Готов» чтобы начать!",
+                $"🎮 *Соперник найден!*\n\n{currentPlayerFlag} *{currentPlayerName}*\n\nНажмите «Готов» чтобы начать!",
                 parseMode: ParseMode.Markdown,
                 replyMarkup: _keyboard.GetReadyKeyboard(),
                 cancellationToken: ct);
