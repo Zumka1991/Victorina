@@ -8,6 +8,7 @@ public class User
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
     public string? Phone { get; set; }
+    public string? CountryCode { get; set; } // ISO 3166-1 alpha-2 (RU, UA, BY, KZ, etc.)
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastActiveAt { get; set; } = DateTime.UtcNow;
 

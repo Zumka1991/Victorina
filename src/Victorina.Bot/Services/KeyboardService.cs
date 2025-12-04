@@ -26,7 +26,7 @@ public class KeyboardService
     {
         return new ReplyKeyboardMarkup(new[]
         {
-            new KeyboardButton[] { "📊 Статистика" },
+            new KeyboardButton[] { "📊 Статистика", "🌍 Страна" },
             new KeyboardButton[] { "👥 Друзья" },
             new KeyboardButton[] { "🔙 Назад" }
         })
@@ -198,6 +198,57 @@ public class KeyboardService
         return new InlineKeyboardMarkup(new[]
         {
             new[] { InlineKeyboardButton.WithCallbackData("🏠 В меню", CallbackData.BackToMenu) }
+        });
+    }
+
+    public InlineKeyboardMarkup GetCountrySelectionKeyboard()
+    {
+        return new InlineKeyboardMarkup(new[]
+        {
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🇷🇺 Россия", $"{CallbackData.SelectCountry}RU"),
+                InlineKeyboardButton.WithCallbackData("🇺🇦 Украина", $"{CallbackData.SelectCountry}UA")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🇧🇾 Беларусь", $"{CallbackData.SelectCountry}BY"),
+                InlineKeyboardButton.WithCallbackData("🇰🇿 Казахстан", $"{CallbackData.SelectCountry}KZ")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🇺🇿 Узбекистан", $"{CallbackData.SelectCountry}UZ"),
+                InlineKeyboardButton.WithCallbackData("🇦🇿 Азербайджан", $"{CallbackData.SelectCountry}AZ")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🇬🇪 Грузия", $"{CallbackData.SelectCountry}GE"),
+                InlineKeyboardButton.WithCallbackData("🇦🇲 Армения", $"{CallbackData.SelectCountry}AM")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🇲🇩 Молдова", $"{CallbackData.SelectCountry}MD"),
+                InlineKeyboardButton.WithCallbackData("🇰🇬 Кыргызстан", $"{CallbackData.SelectCountry}KG")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🇩🇪 Германия", $"{CallbackData.SelectCountry}DE"),
+                InlineKeyboardButton.WithCallbackData("🇵🇱 Польша", $"{CallbackData.SelectCountry}PL")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🇺🇸 США", $"{CallbackData.SelectCountry}US"),
+                InlineKeyboardButton.WithCallbackData("🇬🇧 Великобритания", $"{CallbackData.SelectCountry}GB")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🇮🇱 Израиль", $"{CallbackData.SelectCountry}IL"),
+                InlineKeyboardButton.WithCallbackData("🌍 Другая", $"{CallbackData.SelectCountry}OTHER")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🔙 Назад", CallbackData.BackToProfile)
+            }
         });
     }
 }

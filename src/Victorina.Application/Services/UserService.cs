@@ -77,6 +77,16 @@ public class UserService : IUserService
         }
     }
 
+    public async Task UpdateCountryAsync(int userId, string? countryCode)
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user != null)
+        {
+            user.CountryCode = countryCode;
+            await _context.SaveChangesAsync();
+        }
+    }
+
     public async Task UpdateLastActiveAsync(int userId)
     {
         var user = await _context.Users.FindAsync(userId);

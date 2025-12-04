@@ -117,6 +117,10 @@ public class UpdateHandler
                 await HandleStatisticsReplyAsync(chatId, telegramUser.Id, gameService, ct);
                 break;
 
+            case "🌍 Страна":
+                await HandleCountrySelectionAsync(chatId, user, ct);
+                break;
+
             case "🏆 Лидеры":
                 await HandleLeaderboardReplyAsync(chatId, telegramUser.Id, gameService, ct);
                 break;
@@ -322,6 +326,20 @@ public class UpdateHandler
             cancellationToken: ct);
     }
 
+    private async Task HandleCountrySelectionAsync(long chatId, Domain.Entities.User user, CancellationToken ct)
+    {
+        var currentFlag = CountryService.GetFlag(user.CountryCode);
+        var currentCountry = CountryService.GetCountryName(user.CountryCode);
+
+        await _bot.SendMessage(chatId,
+            $"🌍 *Выбор страны*\n\n" +
+            $"Текущая страна: {currentFlag} {currentCountry}\n\n" +
+            $"Выберите свою страну:",
+            parseMode: ParseMode.Markdown,
+            replyMarkup: _keyboard.GetCountrySelectionKeyboard(),
+            cancellationToken: ct);
+    }
+
     private async Task HandleFriendsListReplyAsync(long chatId, int userId,
         IFriendshipService friendshipService, CancellationToken ct)
     {
@@ -443,8 +461,16 @@ public class UpdateHandler
                     await SendMainMenu(chatId, ct);
                     break;
 
+                case CallbackData.BackToProfile:
+                    await SendProfileMenu(chatId, ct);
+                    break;
+
                 default:
-                    if (data.StartsWith(CallbackData.Answer))
+                    if (data.StartsWith(CallbackData.SelectCountry))
+                    {
+                        await HandleSelectCountryAsync(chatId, messageId, user.Id, data, userService, ct);
+                    }
+                    else if (data.StartsWith(CallbackData.Answer))
                     {
                         await HandleAnswerAsync(chatId, messageId, telegramId, data, gameService, ct);
                     }
@@ -496,8 +522,11 @@ public class UpdateHandler
         else if (session.Status == GameStatus.WaitingForReady)
         {
             var opponent = session.Players.Values.First(p => p.TelegramId != telegramId);
+            var opponentFlag = CountryService.GetFlag(opponent.CountryCode);
+            var opponentName = opponent.GetDisplayName();
             await _bot.SendMessage(chatId,
-                $"🎮 Соперник найден: {opponent.Username}\n\nНажмите «Готов»!",
+                $"🎮 Соперник найден!\n\n{opponentFlag} *{opponentName}*\n\nНажмите «Готов»!",
+                parseMode: ParseMode.Markdown,
                 replyMarkup: _keyboard.GetReadyKeyboard(),
                 cancellationToken: ct);
         }
@@ -662,11 +691,14 @@ public class UpdateHandler
                 title = "Вы проиграли";
             }
 
+            var opponentFlag = CountryService.GetFlag(opponent.CountryCode);
+            var opponentName = opponent.GetDisplayName();
+
             var message = $"{emoji} *{title}*\n\n" +
                          $"📊 *Ваш результат:*\n" +
                          $"✅ Правильных: {playerResult.CorrectAnswers}\n" +
                          $"⏱ Время: {playerResult.TotalTime.TotalSeconds:F2} сек\n\n" +
-                         $"📊 *Соперник:*\n" +
+                         $"📊 *Соперник:* {opponentFlag} {opponentName}\n" +
                          $"✅ Правильных: {opponent.CorrectAnswers}\n" +
                          $"⏱ Время: {opponent.TotalTime.TotalSeconds:F2} сек";
 
@@ -814,5 +846,27 @@ public class UpdateHandler
             parseMode: ParseMode.Markdown,
             replyMarkup: _keyboard.GetReadyKeyboard(),
             cancellationToken: ct);
+    }
+
+    private async Task HandleSelectCountryAsync(long chatId, int messageId, int userId, string data,
+        IUserService userService, CancellationToken ct)
+    {
+        var countryCode = data.Replace(CallbackData.SelectCountry, "");
+
+        if (countryCode == "OTHER")
+        {
+            countryCode = null;
+        }
+
+        await userService.UpdateCountryAsync(userId, countryCode);
+
+        var flag = CountryService.GetFlag(countryCode);
+        var countryName = CountryService.GetCountryName(countryCode);
+
+        await _bot.EditMessageText(chatId, messageId,
+            $"✅ Страна изменена!\n\n{flag} {countryName}",
+            cancellationToken: ct);
+
+        await SendProfileMenu(chatId, ct);
     }
 }

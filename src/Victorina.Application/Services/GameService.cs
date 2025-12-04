@@ -111,6 +111,9 @@ public class GameService : IGameService
             UserId = user.Id,
             TelegramId = telegramId,
             Username = user.Username,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            CountryCode = user.CountryCode,
             GamePlayerId = gamePlayer.Id,
             IsReady = false
         };
@@ -196,6 +199,9 @@ public class GameService : IGameService
             UserId = creator.Id,
             TelegramId = creatorTelegramId,
             Username = creator.Username,
+            FirstName = creator.FirstName,
+            LastName = creator.LastName,
+            CountryCode = creator.CountryCode,
             GamePlayerId = creatorPlayer.Id
         };
 
@@ -204,6 +210,9 @@ public class GameService : IGameService
             UserId = friend.Id,
             TelegramId = friendTelegramId,
             Username = friend.Username,
+            FirstName = friend.FirstName,
+            LastName = friend.LastName,
+            CountryCode = friend.CountryCode,
             GamePlayerId = friendPlayer.Id
         };
 
@@ -241,6 +250,9 @@ public class GameService : IGameService
             UserId = user.Id,
             TelegramId = telegramId,
             Username = user.Username,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            CountryCode = user.CountryCode,
             GamePlayerId = gamePlayer.Id,
             IsReady = false
         };
@@ -484,6 +496,9 @@ public class GameService : IGameService
             {
                 TelegramId = p1.TelegramId,
                 Username = p1.Username,
+                FirstName = p1.FirstName,
+                LastName = p1.LastName,
+                CountryCode = p1.CountryCode,
                 CorrectAnswers = p1.CorrectAnswers,
                 TotalTime = TimeSpan.FromMilliseconds(p1.TotalTimeMs)
             },
@@ -491,6 +506,9 @@ public class GameService : IGameService
             {
                 TelegramId = p2.TelegramId,
                 Username = p2.Username,
+                FirstName = p2.FirstName,
+                LastName = p2.LastName,
+                CountryCode = p2.CountryCode,
                 CorrectAnswers = p2.CorrectAnswers,
                 TotalTime = TimeSpan.FromMilliseconds(p2.TotalTimeMs)
             },

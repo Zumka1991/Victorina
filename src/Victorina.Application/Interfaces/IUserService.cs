@@ -10,6 +10,7 @@ public interface IUserService
     Task<User?> FindByUsernameAsync(string username);
     Task<User?> FindByPhoneAsync(string phone);
     Task UpdatePhoneAsync(int userId, string phone);
+    Task UpdateCountryAsync(int userId, string? countryCode);
     Task UpdateLastActiveAsync(int userId);
     Task<IList<User>> SearchUsersAsync(string query, int excludeUserId);
 }

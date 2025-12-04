@@ -13,7 +13,26 @@ public class GameResult
 public class PlayerResult
 {
     public long TelegramId { get; set; }
-    public string Username { get; set; } = string.Empty;
+    public string? Username { get; set; }
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public string? CountryCode { get; set; }
     public int CorrectAnswers { get; set; }
     public TimeSpan TotalTime { get; set; }
+
+    public string GetDisplayName()
+    {
+        var nameParts = new List<string>();
+        if (!string.IsNullOrEmpty(FirstName))
+            nameParts.Add(FirstName);
+        if (!string.IsNullOrEmpty(LastName))
+            nameParts.Add(LastName);
+
+        var fullName = nameParts.Count > 0 ? string.Join(" ", nameParts) : "Игрок";
+
+        if (!string.IsNullOrEmpty(Username))
+            return $"{fullName} (@{Username})";
+
+        return fullName;
+    }
 }

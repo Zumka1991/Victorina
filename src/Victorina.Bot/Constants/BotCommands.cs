@@ -33,6 +33,10 @@ public static class CallbackData
     // Polling
     public const string CheckGame = "check_game";
     public const string CheckOpponent = "check_opponent";
+
+    // Профиль
+    public const string SelectCountry = "country_";
+    public const string BackToProfile = "back_profile";
 }
 
 public static class BotMessages
