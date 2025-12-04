@@ -553,6 +553,97 @@ public class GameService : IGameService
         _sessionStore.RemoveSession(gameId);
     }
 
+    public async Task<List<TimeoutInfo>> CheckAndHandleTimeoutsAsync()
+    {
+        var timeouts = new List<TimeoutInfo>();
+        var activeSessions = _sessionStore.GetActiveGameSessions().ToList();
+
+        foreach (var session in activeSessions)
+        {
+            if (session.QuestionStartedAt == null) continue;
+
+            var elapsedSeconds = (DateTime.UtcNow - session.QuestionStartedAt.Value).TotalSeconds;
+
+            // Add 2 second buffer for network latency
+            if (elapsedSeconds <= session.QuestionTimeSeconds + 2) continue;
+
+            var question = session.Questions[session.CurrentQuestionIndex];
+            var playersWhoNeedTimeout = session.Players.Values
+                .Where(p => p.CurrentQuestionIndex == session.CurrentQuestionIndex)
+                .ToList();
+
+            if (playersWhoNeedTimeout.Count == 0) continue;
+
+            var bothTimedOut = playersWhoNeedTimeout.Count == 2;
+
+            foreach (var player in playersWhoNeedTimeout)
+            {
+                // Record timeout as wrong answer with max time
+                var timeMs = (long)(session.QuestionTimeSeconds * 1000) + 2000;
+                player.TotalTimeMs += timeMs;
+                player.CurrentQuestionIndex = session.CurrentQuestionIndex + 1;
+                player.LastAnswerTime = DateTime.UtcNow;
+
+                var gameAnswer = new GameAnswer
+                {
+                    GamePlayerId = player.GamePlayerId,
+                    GameQuestionId = question.GameQuestionId,
+                    SelectedAnswer = "TIMEOUT",
+                    IsCorrect = false,
+                    TimeMs = timeMs,
+                    AnsweredAt = DateTime.UtcNow
+                };
+                _context.GameAnswers.Add(gameAnswer);
+
+                var dbPlayer = await _context.GamePlayers.FindAsync(player.GamePlayerId);
+                if (dbPlayer != null)
+                {
+                    dbPlayer.CorrectAnswers = player.CorrectAnswers;
+                    dbPlayer.TotalTimeMs = player.TotalTimeMs;
+                    dbPlayer.CurrentQuestionIndex = player.CurrentQuestionIndex;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Check if game should finish or move to next question
+            var allAnswered = session.Players.Values.All(p => p.CurrentQuestionIndex > session.CurrentQuestionIndex);
+            var isLastQuestion = session.CurrentQuestionIndex + 1 >= session.Questions.Count;
+
+            GameResult? gameResult = null;
+            if (allAnswered && isLastQuestion)
+            {
+                gameResult = await FinishGameAsync(session.GameId);
+            }
+            else if (allAnswered)
+            {
+                await MoveToNextQuestionAsync(session.GameId);
+            }
+
+            // Игроки, которые уже ответили и ждут следующего вопроса
+            var playersWhoAnswered = session.Players.Values
+                .Where(p => !playersWhoNeedTimeout.Any(t => t.TelegramId == p.TelegramId))
+                .Select(p => p.TelegramId)
+                .ToList();
+
+            foreach (var player in playersWhoNeedTimeout)
+            {
+                timeouts.Add(new TimeoutInfo
+                {
+                    GameId = session.GameId,
+                    TelegramId = player.TelegramId,
+                    CorrectAnswer = question.CorrectAnswer,
+                    BothTimedOut = bothTimedOut,
+                    IsLastQuestion = isLastQuestion && allAnswered,
+                    GameResult = gameResult,
+                    PlayersWaitingForNextQuestion = playersWhoAnswered
+                });
+            }
+        }
+
+        return timeouts;
+    }
+
     public async Task<UserStats> GetUserStatsAsync(long telegramId)
     {
         var user = await _userService.GetByTelegramIdAsync(telegramId);

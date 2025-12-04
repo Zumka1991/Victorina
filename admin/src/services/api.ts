@@ -58,3 +58,19 @@ export const getLeaderboard = (sort = 'wins', page = 1, pageSize = 20) =>
   api.get<PaginatedResponse<LeaderboardPlayer>>('/api/leaderboard', {
     params: { sort, page, pageSize }
   }).then(res => res.data);
+
+// Upload
+export const uploadImage = async (file: File): Promise<{ url: string; fileName: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await api.post<{ url: string; fileName: string }>('/api/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return { url: res.data.url, fileName: res.data.fileName };
+};
+
+export const getFullImageUrl = (path: string | undefined | null): string | undefined => {
+  if (!path) return undefined;
+  if (path.startsWith('http')) return path;
+  return `${API_URL}${path}`;
+};

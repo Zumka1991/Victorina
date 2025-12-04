@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getQuestions, getCategories, createQuestion, updateQuestion, deleteQuestion } from '../services/api';
+import { getQuestions, getCategories, createQuestion, updateQuestion, deleteQuestion, uploadImage, getFullImageUrl } from '../services/api';
 import type { Question } from '../types';
 
 export default function Questions() {
@@ -9,6 +9,8 @@ export default function Questions() {
   const [categoryFilter, setCategoryFilter] = useState<number | undefined>();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     categoryId: 0,
     text: '',
@@ -99,6 +101,41 @@ export default function Questions() {
     }
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Пожалуйста, выберите изображение');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Размер файла не должен превышать 5 МБ');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const result = await uploadImage(file);
+      setForm({ ...form, imageUrl: result.url });
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Ошибка при загрузке изображения');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setForm({ ...form, imageUrl: '' });
+  };
+
   const totalPages = questionsData ? Math.ceil(questionsData.total / 20) : 0;
 
   if (isLoading) {
@@ -108,9 +145,9 @@ export default function Questions() {
   return (
     <div>
       <div className="page-header">
-        <h2>❓ Вопросы</h2>
+        <h2>Вопросы</h2>
         <button className="btn btn-primary" onClick={() => openModal()}>
-          ➕ Добавить вопрос
+          + Добавить вопрос
         </button>
       </div>
 
@@ -161,7 +198,7 @@ export default function Questions() {
                     <td>
                       {question.imageUrl ? (
                         <img
-                          src={question.imageUrl}
+                          src={getFullImageUrl(question.imageUrl)}
                           alt=""
                           style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
                         />
@@ -175,7 +212,7 @@ export default function Questions() {
                           className="btn btn-sm btn-secondary"
                           onClick={() => openModal(question)}
                         >
-                          ✏️
+                          Edit
                         </button>
                         <button
                           className="btn btn-sm btn-danger"
@@ -185,7 +222,7 @@ export default function Questions() {
                             }
                           }}
                         >
-                          🗑️
+                          Del
                         </button>
                       </div>
                     </td>
@@ -201,7 +238,7 @@ export default function Questions() {
                   disabled={page === 1}
                   onClick={() => setPage(page - 1)}
                 >
-                  ← Назад
+                  Назад
                 </button>
                 <span>
                   Страница {page} из {totalPages}
@@ -211,7 +248,7 @@ export default function Questions() {
                   disabled={page === totalPages}
                   onClick={() => setPage(page + 1)}
                 >
-                  Вперёд →
+                  Вперёд
                 </button>
               </div>
             )}
@@ -220,7 +257,7 @@ export default function Questions() {
           <div className="empty-state">
             <p>Вопросов пока нет</p>
             <button className="btn btn-primary" onClick={() => openModal()}>
-              ➕ Создать первый вопрос
+              + Создать первый вопрос
             </button>
           </div>
         )}
@@ -258,7 +295,7 @@ export default function Questions() {
               </div>
 
               <div className="form-group">
-                <label style={{ color: '#27ae60' }}>✓ Правильный ответ *</label>
+                <label style={{ color: '#27ae60' }}>Правильный ответ *</label>
                 <input
                   type="text"
                   value={form.correctAnswer}
@@ -270,7 +307,7 @@ export default function Questions() {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label style={{ color: '#e74c3c' }}>✗ Неправильный ответ 1 *</label>
+                  <label style={{ color: '#e74c3c' }}>Неправильный ответ 1 *</label>
                   <input
                     type="text"
                     value={form.wrongAnswer1}
@@ -280,7 +317,7 @@ export default function Questions() {
                   />
                 </div>
                 <div className="form-group">
-                  <label style={{ color: '#e74c3c' }}>✗ Неправильный ответ 2 *</label>
+                  <label style={{ color: '#e74c3c' }}>Неправильный ответ 2 *</label>
                   <input
                     type="text"
                     value={form.wrongAnswer2}
@@ -292,7 +329,7 @@ export default function Questions() {
               </div>
 
               <div className="form-group">
-                <label style={{ color: '#e74c3c' }}>✗ Неправильный ответ 3 *</label>
+                <label style={{ color: '#e74c3c' }}>Неправильный ответ 3 *</label>
                 <input
                   type="text"
                   value={form.wrongAnswer3}
@@ -312,23 +349,62 @@ export default function Questions() {
               </div>
 
               <div className="form-group">
-                <label>🖼️ URL картинки (необязательно)</label>
-                <input
-                  type="url"
-                  value={form.imageUrl}
-                  onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                  placeholder="https://example.com/image.jpg"
-                />
-                {form.imageUrl && (
-                  <div style={{ marginTop: '8px' }}>
-                    <img
-                      src={form.imageUrl}
-                      alt="Preview"
-                      style={{ maxWidth: '200px', maxHeight: '150px', borderRadius: '8px' }}
-                      onError={(e) => (e.currentTarget.style.display = 'none')}
-                    />
-                  </div>
-                )}
+                <label>Картинка (необязательно)</label>
+                <div style={{
+                  border: '2px dashed #ddd',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  backgroundColor: '#fafafa'
+                }}>
+                  {form.imageUrl ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <img
+                        src={getFullImageUrl(form.imageUrl)}
+                        alt="Preview"
+                        style={{
+                          maxWidth: '200px',
+                          maxHeight: '150px',
+                          borderRadius: '8px',
+                          objectFit: 'cover',
+                          border: '1px solid #ddd'
+                        }}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <span style={{ fontSize: '12px', color: '#666', wordBreak: 'break-all' }}>
+                          {form.imageUrl}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-danger"
+                          onClick={handleRemoveImage}
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        style={{ display: 'none' }}
+                        id="image-upload"
+                      />
+                      <label
+                        htmlFor="image-upload"
+                        className="btn btn-secondary"
+                        style={{ cursor: isUploading ? 'wait' : 'pointer' }}
+                      >
+                        {isUploading ? 'Загрузка...' : 'Выбрать файл'}
+                      </label>
+                      <span style={{ color: '#666', fontSize: '14px' }}>
+                        JPG, PNG, GIF, WEBP до 5 МБ
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="modal-actions">
@@ -338,7 +414,7 @@ export default function Questions() {
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={createMutation.isPending || updateMutation.isPending || isUploading}
                 >
                   {editingQuestion ? 'Сохранить' : 'Создать'}
                 </button>

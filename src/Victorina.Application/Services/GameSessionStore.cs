@@ -63,4 +63,10 @@ public class GameSessionStore
             s.Status == Domain.Enums.GameStatus.WaitingForPlayers &&
             s.Type == Domain.Enums.GameType.QuickGame);
     }
+
+    public IEnumerable<GameSession> GetActiveGameSessions()
+    {
+        return _sessions.Values.Where(s =>
+            s.Status == Domain.Enums.GameStatus.InProgress);
+    }
 }

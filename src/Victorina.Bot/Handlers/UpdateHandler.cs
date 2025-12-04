@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -18,19 +19,22 @@ public class UpdateHandler
     private readonly KeyboardService _keyboard;
     private readonly UserStateService _userState;
     private readonly ILogger<UpdateHandler> _logger;
+    private readonly string _apiBaseUrl;
 
     public UpdateHandler(
         ITelegramBotClient bot,
         IServiceProvider serviceProvider,
         KeyboardService keyboard,
         UserStateService userState,
-        ILogger<UpdateHandler> logger)
+        ILogger<UpdateHandler> logger,
+        IConfiguration configuration)
     {
         _bot = bot;
         _serviceProvider = serviceProvider;
         _keyboard = keyboard;
         _userState = userState;
         _logger = logger;
+        _apiBaseUrl = configuration["Api:BaseUrl"] ?? "http://localhost:5175";
     }
 
     public async Task HandleUpdateAsync(Update update, CancellationToken ct)
@@ -618,15 +622,31 @@ public class UpdateHandler
         var session = await gameService.GetActiveGameAsync(telegramId);
         if (session == null || session.Status != GameStatus.InProgress) return;
 
+        // Получаем текущий вопрос до ответа, чтобы знать есть ли картинка
+        var currentQuestion = session.Questions[session.CurrentQuestionIndex];
+        var hasImage = !string.IsNullOrEmpty(currentQuestion.ImageUrl);
+
         var result = await gameService.SubmitAnswerAsync(session.GameId, telegramId, answerIndex);
 
         var emoji = result.IsCorrect ? "✅" : "❌";
-        await _bot.EditMessageText(chatId, messageId,
-            $"{emoji} {(result.IsCorrect ? "Правильно!" : "Неверно!")}\n\n" +
+        var resultText = $"{emoji} {(result.IsCorrect ? "Правильно!" : "Неверно!")}\n\n" +
             $"Правильный ответ: *{result.CorrectAnswer}*\n" +
-            $"⏱ Ваше время: {result.TimeMs / 1000.0:F2} сек",
-            parseMode: ParseMode.Markdown,
-            cancellationToken: ct);
+            $"⏱ Ваше время: {result.TimeMs / 1000.0:F2} сек";
+
+        if (hasImage)
+        {
+            // Для вопроса с картинкой - удаляем сообщение и отправляем результат текстом
+            try { await _bot.DeleteMessage(chatId, messageId, ct); } catch { }
+            await _bot.SendMessage(chatId, resultText, parseMode: ParseMode.Markdown, cancellationToken: ct);
+        }
+        else
+        {
+            // Для текстовых сообщений редактируем текст
+            await _bot.EditMessageText(chatId, messageId,
+                resultText,
+                parseMode: ParseMode.Markdown,
+                cancellationToken: ct);
+        }
 
         session = await gameService.GetActiveGameAsync(telegramId);
         if (session == null) return;
@@ -699,6 +719,8 @@ public class UpdateHandler
         }
     }
 
+    private static readonly HttpClient _httpClient = new();
+
     private async Task SendQuestionAsync(long chatId, Application.Models.GameSessionQuestion question,
         int questionNumber, int totalQuestions, CancellationToken ct)
     {
@@ -706,13 +728,35 @@ public class UpdateHandler
 
         if (!string.IsNullOrEmpty(question.ImageUrl))
         {
-            // Отправляем картинку с подписью и кнопками
-            await _bot.SendPhoto(chatId,
-                new Telegram.Bot.Types.InputFileUrl(question.ImageUrl),
-                caption: questionText,
-                parseMode: ParseMode.Markdown,
-                replyMarkup: _keyboard.GetQuestionKeyboard(question.Answers),
-                cancellationToken: ct);
+            try
+            {
+                // Формируем полный URL для картинки
+                var imageUrl = question.ImageUrl.StartsWith("http")
+                    ? question.ImageUrl
+                    : $"{_apiBaseUrl}{question.ImageUrl}";
+
+                // Скачиваем картинку и отправляем как stream
+                var imageBytes = await _httpClient.GetByteArrayAsync(imageUrl, ct);
+                using var stream = new MemoryStream(imageBytes);
+                var fileName = Path.GetFileName(question.ImageUrl);
+
+                await _bot.SendPhoto(chatId,
+                    new Telegram.Bot.Types.InputFileStream(stream, fileName),
+                    caption: questionText,
+                    parseMode: ParseMode.Markdown,
+                    replyMarkup: _keyboard.GetQuestionKeyboard(question.Answers),
+                    cancellationToken: ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send image, sending text only");
+                // Если не удалось отправить картинку - отправляем только текст
+                await _bot.SendMessage(chatId,
+                    questionText,
+                    parseMode: ParseMode.Markdown,
+                    replyMarkup: _keyboard.GetQuestionKeyboard(question.Answers),
+                    cancellationToken: ct);
+            }
         }
         else
         {

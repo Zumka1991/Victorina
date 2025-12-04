@@ -1,9 +1,14 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Victorina.Application;
 using Victorina.Infrastructure;
 using Victorina.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Ensure uploads directory exists
+var uploadsPath = Path.Combine(builder.Environment.ContentRootPath, "uploads");
+Directory.CreateDirectory(uploadsPath);
 
 // Configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -15,6 +20,10 @@ builder.Services.AddApplication();
 
 // API
 builder.Services.AddOpenApi();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+});
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -41,10 +50,50 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors();
 
+// Static files for uploads
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
+});
+
 // API Endpoints
 app.MapGet("/api/health", () => Results.Ok(new { Status = "Healthy", Time = DateTime.UtcNow }))
     .WithName("HealthCheck")
     .WithTags("System");
+
+// File Upload
+app.MapPost("/api/upload", async (HttpRequest request) =>
+{
+    if (!request.HasFormContentType)
+        return Results.BadRequest(new { Error = "Expected multipart/form-data" });
+
+    var form = await request.ReadFormAsync();
+    var file = form.Files.GetFile("file");
+
+    if (file == null || file.Length == 0)
+        return Results.BadRequest(new { Error = "No file uploaded" });
+
+    // Validate file type
+    var allowedTypes = new[] { "image/jpeg", "image/png", "image/gif", "image/webp" };
+    if (!allowedTypes.Contains(file.ContentType.ToLower()))
+        return Results.BadRequest(new { Error = "Only images are allowed (jpeg, png, gif, webp)" });
+
+    // Max 5MB
+    if (file.Length > 5 * 1024 * 1024)
+        return Results.BadRequest(new { Error = "File size must be less than 5MB" });
+
+    // Generate unique filename
+    var extension = Path.GetExtension(file.FileName).ToLower();
+    var fileName = $"{Guid.NewGuid()}{extension}";
+    var filePath = Path.Combine(uploadsPath, fileName);
+
+    await using var stream = new FileStream(filePath, FileMode.Create);
+    await file.CopyToAsync(stream);
+
+    var url = $"/uploads/{fileName}";
+    return Results.Json(new { url, fileName });
+}).WithTags("Upload").DisableAntiforgery();
 
 // Categories
 app.MapGet("/api/categories", async (VictorinaDbContext db) =>

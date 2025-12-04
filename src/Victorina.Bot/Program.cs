@@ -33,6 +33,7 @@ builder.Services.AddSingleton<KeyboardService>();
 builder.Services.AddSingleton<UserStateService>();
 builder.Services.AddSingleton<UpdateHandler>();
 builder.Services.AddHostedService<BotService>();
+builder.Services.AddHostedService<QuestionTimeoutService>();
 
 var host = builder.Build();
 
