@@ -17,6 +17,7 @@ export default function Questions() {
     wrongAnswer2: '',
     wrongAnswer3: '',
     explanation: '',
+    imageUrl: '',
   });
 
   const { data: questionsData, isLoading } = useQuery({
@@ -66,6 +67,7 @@ export default function Questions() {
         wrongAnswer2: question.wrongAnswer2,
         wrongAnswer3: question.wrongAnswer3,
         explanation: question.explanation || '',
+        imageUrl: question.imageUrl || '',
       });
     } else {
       setEditingQuestion(null);
@@ -77,6 +79,7 @@ export default function Questions() {
         wrongAnswer2: '',
         wrongAnswer3: '',
         explanation: '',
+        imageUrl: '',
       });
     }
     setIsModalOpen(true);
@@ -141,6 +144,7 @@ export default function Questions() {
                   <th style={{ width: '40%' }}>Вопрос</th>
                   <th>Категория</th>
                   <th>Правильный ответ</th>
+                  <th>Картинка</th>
                   <th>Действия</th>
                 </tr>
               </thead>
@@ -153,6 +157,17 @@ export default function Questions() {
                     </td>
                     <td style={{ color: '#27ae60', fontWeight: 500 }}>
                       {question.correctAnswer}
+                    </td>
+                    <td>
+                      {question.imageUrl ? (
+                        <img
+                          src={question.imageUrl}
+                          alt=""
+                          style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
+                        />
+                      ) : (
+                        <span style={{ color: '#999' }}>—</span>
+                      )}
                     </td>
                     <td>
                       <div className="actions">
@@ -294,6 +309,26 @@ export default function Questions() {
                   onChange={(e) => setForm({ ...form, explanation: e.target.value })}
                   placeholder="Париж — столица Франции с 987 года"
                 />
+              </div>
+
+              <div className="form-group">
+                <label>🖼️ URL картинки (необязательно)</label>
+                <input
+                  type="url"
+                  value={form.imageUrl}
+                  onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                />
+                {form.imageUrl && (
+                  <div style={{ marginTop: '8px' }}>
+                    <img
+                      src={form.imageUrl}
+                      alt="Preview"
+                      style={{ maxWidth: '200px', maxHeight: '150px', borderRadius: '8px' }}
+                      onError={(e) => (e.currentTarget.style.display = 'none')}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="modal-actions">

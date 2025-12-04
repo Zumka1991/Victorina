@@ -112,7 +112,8 @@ public class GameService : IGameService
                     Answers = answers,
                     CorrectAnswer = q.CorrectAnswer,
                     CorrectAnswerIndex = Array.IndexOf(answers, q.CorrectAnswer),
-                    Explanation = q.Explanation
+                    Explanation = q.Explanation,
+                    ImageUrl = q.ImageUrl
                 };
             }).ToList()
         };
@@ -210,7 +211,8 @@ public class GameService : IGameService
                     Answers = answers,
                     CorrectAnswer = q.CorrectAnswer,
                     CorrectAnswerIndex = Array.IndexOf(answers, q.CorrectAnswer),
-                    Explanation = q.Explanation
+                    Explanation = q.Explanation,
+                    ImageUrl = q.ImageUrl
                 };
             }).ToList()
         };

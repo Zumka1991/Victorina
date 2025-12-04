@@ -124,6 +124,7 @@ app.MapGet("/api/questions", async (VictorinaDbContext db, int? categoryId, int 
             q.WrongAnswer2,
             q.WrongAnswer3,
             q.Explanation,
+            q.ImageUrl,
             Category = q.Category.Name,
             q.CategoryId,
             q.CreatedAt
@@ -144,6 +145,7 @@ app.MapPost("/api/questions", async (VictorinaDbContext db, QuestionDto dto) =>
         WrongAnswer2 = dto.WrongAnswer2,
         WrongAnswer3 = dto.WrongAnswer3,
         Explanation = dto.Explanation,
+        ImageUrl = dto.ImageUrl,
         IsActive = true
     };
     db.Questions.Add(question);
@@ -163,6 +165,7 @@ app.MapPut("/api/questions/{id}", async (VictorinaDbContext db, int id, Question
     question.WrongAnswer2 = dto.WrongAnswer2;
     question.WrongAnswer3 = dto.WrongAnswer3;
     question.Explanation = dto.Explanation;
+    question.ImageUrl = dto.ImageUrl;
     await db.SaveChangesAsync();
     return Results.Ok(question);
 }).WithTags("Questions");
@@ -306,5 +309,5 @@ app.Run();
 
 // DTOs
 record CategoryDto(string Name, string? Description, string? Emoji);
-record QuestionDto(int CategoryId, string Text, string CorrectAnswer, string WrongAnswer1, string WrongAnswer2, string WrongAnswer3, string? Explanation);
+record QuestionDto(int CategoryId, string Text, string CorrectAnswer, string WrongAnswer1, string WrongAnswer2, string WrongAnswer3, string? Explanation, string? ImageUrl);
 record SettingDto(string Value);

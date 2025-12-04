@@ -10,6 +10,7 @@ public class Question
     public string WrongAnswer2 { get; set; } = string.Empty;
     public string WrongAnswer3 { get; set; } = string.Empty;
     public string? Explanation { get; set; }
+    public string? ImageUrl { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

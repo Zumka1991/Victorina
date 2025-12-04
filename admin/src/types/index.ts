@@ -16,6 +16,7 @@ export interface Question {
   wrongAnswer2: string;
   wrongAnswer3: string;
   explanation?: string;
+  imageUrl?: string;
   createdAt?: string;
 }
 

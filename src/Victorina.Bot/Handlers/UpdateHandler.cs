@@ -598,11 +598,7 @@ public class UpdateHandler
 
                 await Task.Delay(1000, ct);
 
-                await _bot.SendMessage(player.TelegramId,
-                    $"❓ *Вопрос 1/{session.Questions.Count}*\n\n{question.Text}",
-                    parseMode: ParseMode.Markdown,
-                    replyMarkup: _keyboard.GetQuestionKeyboard(question.Answers),
-                    cancellationToken: ct);
+                await SendQuestionAsync(player.TelegramId, question, 1, session.Questions.Count, ct);
             }
         }
         else
@@ -660,11 +656,8 @@ public class UpdateHandler
                     foreach (var p in session.Players.Values)
                     {
                         await Task.Delay(1500, ct);
-                        await _bot.SendMessage(p.TelegramId,
-                            $"❓ *Вопрос {session.CurrentQuestionIndex + 1}/{session.Questions.Count}*\n\n{nextQuestion.Text}",
-                            parseMode: ParseMode.Markdown,
-                            replyMarkup: _keyboard.GetQuestionKeyboard(nextQuestion.Answers),
-                            cancellationToken: ct);
+                        await SendQuestionAsync(p.TelegramId, nextQuestion,
+                            session.CurrentQuestionIndex + 1, session.Questions.Count, ct);
                     }
                 }
             }
@@ -694,17 +687,40 @@ public class UpdateHandler
             if (session.CurrentQuestionIndex < session.Questions.Count)
             {
                 var question = session.Questions[session.CurrentQuestionIndex];
-                await _bot.SendMessage(chatId,
-                    $"❓ *Вопрос {session.CurrentQuestionIndex + 1}/{session.Questions.Count}*\n\n{question.Text}",
-                    parseMode: ParseMode.Markdown,
-                    replyMarkup: _keyboard.GetQuestionKeyboard(question.Answers),
-                    cancellationToken: ct);
+                await SendQuestionAsync(chatId, question,
+                    session.CurrentQuestionIndex + 1, session.Questions.Count, ct);
             }
         }
         else
         {
             await _bot.SendMessage(chatId,
                 "⏳ Соперник ещё отвечает...",
+                cancellationToken: ct);
+        }
+    }
+
+    private async Task SendQuestionAsync(long chatId, Application.Models.GameSessionQuestion question,
+        int questionNumber, int totalQuestions, CancellationToken ct)
+    {
+        var questionText = $"❓ *Вопрос {questionNumber}/{totalQuestions}*\n\n{question.Text}";
+
+        if (!string.IsNullOrEmpty(question.ImageUrl))
+        {
+            // Отправляем картинку с подписью и кнопками
+            await _bot.SendPhoto(chatId,
+                new Telegram.Bot.Types.InputFileUrl(question.ImageUrl),
+                caption: questionText,
+                parseMode: ParseMode.Markdown,
+                replyMarkup: _keyboard.GetQuestionKeyboard(question.Answers),
+                cancellationToken: ct);
+        }
+        else
+        {
+            // Отправляем просто текст с кнопками
+            await _bot.SendMessage(chatId,
+                questionText,
+                parseMode: ParseMode.Markdown,
+                replyMarkup: _keyboard.GetQuestionKeyboard(question.Answers),
                 cancellationToken: ct);
         }
     }

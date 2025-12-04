@@ -60,4 +60,5 @@ public class GameSessionQuestion
     public string CorrectAnswer { get; set; } = string.Empty;
     public int CorrectAnswerIndex { get; set; }
     public string? Explanation { get; set; }
+    public string? ImageUrl { get; set; }
 }

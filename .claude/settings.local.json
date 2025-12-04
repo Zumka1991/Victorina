@@ -21,7 +21,8 @@
       "Bash(npm create:*)",
       "Bash(npm install)",
       "Bash(npm run build:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(dotnet add package:*)"
     ],
     "deny": [],
     "ask": []
