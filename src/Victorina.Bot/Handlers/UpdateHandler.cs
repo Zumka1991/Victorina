@@ -74,7 +74,7 @@ public class UpdateHandler
         // Обработка состояния поиска друга
         if (state == UserState.WaitingForFriendSearch)
         {
-            if (text == "🔙 Назад" || text == "❌ Отмена")
+            if (text == "🔙 Назад" || text == "❌ Отмена" || text == "🔙 В профиль")
             {
                 _userState.ClearState(telegramUser.Id);
                 await SendFriendsMenu(chatId, ct);
@@ -93,6 +93,10 @@ public class UpdateHandler
                 await SendMainMenu(chatId, ct);
                 break;
 
+            case "🔙 В профиль":
+                await SendProfileMenu(chatId, ct);
+                break;
+
             case "🎮 Играть":
                 await SendPlayMenu(chatId, ct);
                 break;
@@ -103,6 +107,10 @@ public class UpdateHandler
 
             case "👤 Играть с другом":
                 await HandlePlayWithFriendReplyAsync(chatId, user.Id, friendshipService, ct);
+                break;
+
+            case "👤 Мой профиль":
+                await SendProfileMenu(chatId, ct);
                 break;
 
             case "📊 Статистика":
@@ -191,6 +199,15 @@ public class UpdateHandler
             cancellationToken: ct);
     }
 
+    private async Task SendProfileMenu(long chatId, CancellationToken ct)
+    {
+        await _bot.SendMessage(chatId,
+            "👤 *Мой профиль*\n\nВыберите раздел:",
+            parseMode: ParseMode.Markdown,
+            replyMarkup: _keyboard.GetProfileMenuReplyKeyboard(),
+            cancellationToken: ct);
+    }
+
     private async Task SendFriendsMenu(long chatId, CancellationToken ct)
     {
         await _bot.SendMessage(chatId,
@@ -255,7 +272,7 @@ public class UpdateHandler
             $"📈 Процент побед: *{stats.WinRate:F1}%*\n" +
             $"✅ Правильных ответов: *{stats.TotalCorrectAnswers}*",
             parseMode: ParseMode.Markdown,
-            replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+            replyMarkup: _keyboard.GetProfileMenuReplyKeyboard(),
             cancellationToken: ct);
     }
 

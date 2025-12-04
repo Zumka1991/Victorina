@@ -13,12 +13,25 @@ public class KeyboardService
         return new ReplyKeyboardMarkup(new[]
         {
             new KeyboardButton[] { "🎮 Играть" },
-            new KeyboardButton[] { "📊 Статистика", "🏆 Лидеры" },
-            new KeyboardButton[] { "👥 Друзья", "❓ Помощь" }
+            new KeyboardButton[] { "👤 Мой профиль", "🏆 Лидеры" },
+            new KeyboardButton[] { "❓ Помощь" }
         })
         {
             ResizeKeyboard = true,
             IsPersistent = true
+        };
+    }
+
+    public ReplyKeyboardMarkup GetProfileMenuReplyKeyboard()
+    {
+        return new ReplyKeyboardMarkup(new[]
+        {
+            new KeyboardButton[] { "📊 Статистика" },
+            new KeyboardButton[] { "👥 Друзья" },
+            new KeyboardButton[] { "🔙 Назад" }
+        })
+        {
+            ResizeKeyboard = true
         };
     }
 
@@ -41,7 +54,7 @@ public class KeyboardService
         {
             new KeyboardButton[] { "📋 Мои друзья" },
             new KeyboardButton[] { "➕ Добавить друга", "📩 Запросы" },
-            new KeyboardButton[] { "🔙 Назад" }
+            new KeyboardButton[] { "🔙 В профиль" }
         })
         {
             ResizeKeyboard = true
