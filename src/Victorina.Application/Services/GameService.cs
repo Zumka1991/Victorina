@@ -29,9 +29,18 @@ public class GameService : IGameService
 
     public async Task<GameSession?> FindQuickGameAsync(long telegramId, int? categoryId = null)
     {
+        // Get the TranslationGroupId for the selected category
+        Guid? categoryTranslationGroupId = null;
+        if (categoryId.HasValue)
+        {
+            var category = await _context.Categories.FindAsync(categoryId.Value);
+            categoryTranslationGroupId = category?.TranslationGroupId;
+        }
+
+        // Match by TranslationGroupId (cross-language) or by null (any category)
         var waitingSession = _sessionStore.GetWaitingSessions()
             .FirstOrDefault(s => !s.Players.ContainsKey(telegramId) &&
-                                 s.CategoryId == categoryId);
+                                 s.CategoryTranslationGroupId == categoryTranslationGroupId);
 
         return waitingSession;
     }
@@ -42,13 +51,16 @@ public class GameService : IGameService
         if (user == null) throw new InvalidOperationException("User not found");
 
         var settings = await GetGameSettingsAsync();
-        var questions = await _questionService.GetRandomQuestionsAsync(settings.QuestionsCount, categoryId);
+        // Load questions in player's language
+        var questions = await _questionService.GetRandomQuestionsAsync(settings.QuestionsCount, categoryId, user.LanguageCode);
 
         string? categoryName = null;
+        Guid? categoryTranslationGroupId = null;
         if (categoryId.HasValue)
         {
             var category = await _context.Categories.FindAsync(categoryId.Value);
             categoryName = category?.Name;
+            categoryTranslationGroupId = category?.TranslationGroupId;
         }
 
         var game = new Game
@@ -72,6 +84,7 @@ public class GameService : IGameService
         };
         _context.GamePlayers.Add(gamePlayer);
 
+        // Store GameQuestions in DB (question IDs without language-specific content)
         var gameQuestions = new List<GameQuestion>();
         for (int i = 0; i < questions.Count; i++)
         {
@@ -90,6 +103,25 @@ public class GameService : IGameService
 
         await _context.SaveChangesAsync();
 
+        // Create player-specific questions list
+        var playerQuestions = gameQuestions.Select((gq, idx) =>
+        {
+            var q = questions[idx];
+            var answers = JsonSerializer.Deserialize<string[]>(gq.ShuffledAnswersJson)!;
+            return new GameSessionQuestion
+            {
+                QuestionId = q.Id,
+                GameQuestionId = gq.Id,
+                TranslationGroupId = q.TranslationGroupId, // Save for finding translations
+                Text = q.Text,
+                Answers = answers,
+                CorrectAnswer = q.CorrectAnswer,
+                CorrectAnswerIndex = Array.IndexOf(answers, q.CorrectAnswer),
+                Explanation = q.Explanation,
+                ImageUrl = q.ImageUrl
+            };
+        }).ToList();
+
         var session = new GameSession
         {
             GameId = game.Id,
@@ -97,25 +129,12 @@ public class GameService : IGameService
             Status = GameStatus.WaitingForPlayers,
             Type = GameType.QuickGame,
             CategoryId = categoryId,
+            CategoryTranslationGroupId = categoryTranslationGroupId,
             CategoryName = categoryName,
+            LanguageCode = user.LanguageCode,
             QuestionTimeSeconds = settings.QuestionTimeSeconds,
             CreatedAt = DateTime.UtcNow,
-            Questions = gameQuestions.Select((gq, idx) =>
-            {
-                var q = questions[idx];
-                var answers = JsonSerializer.Deserialize<string[]>(gq.ShuffledAnswersJson)!;
-                return new GameSessionQuestion
-                {
-                    QuestionId = q.Id,
-                    GameQuestionId = gq.Id,
-                    Text = q.Text,
-                    Answers = answers,
-                    CorrectAnswer = q.CorrectAnswer,
-                    CorrectAnswerIndex = Array.IndexOf(answers, q.CorrectAnswer),
-                    Explanation = q.Explanation,
-                    ImageUrl = q.ImageUrl
-                };
-            }).ToList()
+            Questions = playerQuestions // Keep for backwards compatibility, but player-specific questions are in PlayerSession
         };
 
         session.Players[telegramId] = new PlayerSession
@@ -126,8 +145,10 @@ public class GameService : IGameService
             FirstName = user.FirstName,
             LastName = user.LastName,
             CountryCode = user.CountryCode,
+            LanguageCode = user.LanguageCode,
             GamePlayerId = gamePlayer.Id,
-            IsReady = false
+            IsReady = false,
+            Questions = playerQuestions // Player's questions in their language
         };
 
         _sessionStore.AddSession(session);
@@ -144,13 +165,66 @@ public class GameService : IGameService
             throw new InvalidOperationException("User not found");
 
         var settings = await GetGameSettingsAsync();
-        var questions = await _questionService.GetRandomQuestionsAsync(settings.QuestionsCount, categoryId);
 
         string? categoryName = null;
+        Guid? categoryTranslationGroupId = null;
         if (categoryId.HasValue)
         {
             var category = await _context.Categories.FindAsync(categoryId.Value);
             categoryName = category?.Name;
+            categoryTranslationGroupId = category?.TranslationGroupId;
+        }
+
+        // Load questions for creator first
+        var creatorQuestions = (await _questionService.GetRandomQuestionsAsync(
+            settings.QuestionsCount, categoryId, creator.LanguageCode)).ToList();
+
+        List<Question> friendQuestions;
+
+        if (creator.LanguageCode == friend.LanguageCode)
+        {
+            // Same language - use same questions
+            friendQuestions = creatorQuestions;
+        }
+        else
+        {
+            // Different languages - find translations of creator's questions
+            var translationGroupIds = creatorQuestions
+                .Where(q => q.TranslationGroupId.HasValue)
+                .Select(q => q.TranslationGroupId!.Value)
+                .ToList();
+
+            if (translationGroupIds.Count > 0)
+            {
+                var translatedQuestions = await _questionService.GetQuestionsByTranslationGroupIdsAsync(
+                    translationGroupIds, friend.LanguageCode);
+
+                if (translatedQuestions.Count > 0)
+                {
+                    // Match translations to creator's questions by TranslationGroupId
+                    var translatedByGroup = translatedQuestions.ToDictionary(q => q.TranslationGroupId!.Value);
+                    friendQuestions = creatorQuestions.Select(cq =>
+                    {
+                        if (cq.TranslationGroupId.HasValue &&
+                            translatedByGroup.TryGetValue(cq.TranslationGroupId.Value, out var translated))
+                        {
+                            return translated;
+                        }
+                        // No translation - use original
+                        return cq;
+                    }).ToList();
+                }
+                else
+                {
+                    // No translations found - use creator's questions
+                    friendQuestions = creatorQuestions;
+                }
+            }
+            else
+            {
+                // No TranslationGroupIds - use creator's questions
+                friendQuestions = creatorQuestions;
+            }
         }
 
         var game = new Game
@@ -159,7 +233,7 @@ public class GameService : IGameService
             Status = GameStatus.WaitingForPlayers,
             CategoryId = categoryId,
             QuestionTimeSeconds = settings.QuestionTimeSeconds,
-            TotalQuestions = settings.QuestionsCount,
+            TotalQuestions = creatorQuestions.Count,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -171,10 +245,11 @@ public class GameService : IGameService
 
         _context.GamePlayers.AddRange(creatorPlayer, friendPlayer);
 
+        // Store GameQuestions using creator's questions for DB reference
         var gameQuestions = new List<GameQuestion>();
-        for (int i = 0; i < questions.Count; i++)
+        for (int i = 0; i < creatorQuestions.Count; i++)
         {
-            var q = questions[i];
+            var q = creatorQuestions[i];
             var shuffled = q.GetShuffledAnswers();
             var gq = new GameQuestion
             {
@@ -189,6 +264,44 @@ public class GameService : IGameService
 
         await _context.SaveChangesAsync();
 
+        // Create creator's questions list
+        var creatorSessionQuestions = gameQuestions.Select((gq, idx) =>
+        {
+            var q = creatorQuestions[idx];
+            var answers = JsonSerializer.Deserialize<string[]>(gq.ShuffledAnswersJson)!;
+            return new GameSessionQuestion
+            {
+                QuestionId = q.Id,
+                GameQuestionId = gq.Id,
+                TranslationGroupId = q.TranslationGroupId,
+                Text = q.Text,
+                Answers = answers,
+                CorrectAnswer = q.CorrectAnswer,
+                CorrectAnswerIndex = Array.IndexOf(answers, q.CorrectAnswer),
+                Explanation = q.Explanation,
+                ImageUrl = q.ImageUrl
+            };
+        }).ToList();
+
+        // Create friend's questions list
+        var friendSessionQuestions = friendQuestions.Select((q, idx) =>
+        {
+            var answers = q.GetShuffledAnswers();
+            var gameQuestion = gameQuestions.ElementAtOrDefault(idx);
+            return new GameSessionQuestion
+            {
+                QuestionId = q.Id,
+                GameQuestionId = gameQuestion?.Id ?? 0,
+                TranslationGroupId = q.TranslationGroupId,
+                Text = q.Text,
+                Answers = answers,
+                CorrectAnswer = q.CorrectAnswer,
+                CorrectAnswerIndex = Array.IndexOf(answers, q.CorrectAnswer),
+                Explanation = q.Explanation,
+                ImageUrl = q.ImageUrl
+            };
+        }).ToList();
+
         var session = new GameSession
         {
             GameId = game.Id,
@@ -196,25 +309,12 @@ public class GameService : IGameService
             Status = GameStatus.WaitingForPlayers,
             Type = GameType.FriendGame,
             CategoryId = categoryId,
+            CategoryTranslationGroupId = categoryTranslationGroupId,
             CategoryName = categoryName,
+            LanguageCode = creator.LanguageCode,
             QuestionTimeSeconds = settings.QuestionTimeSeconds,
             CreatedAt = DateTime.UtcNow,
-            Questions = gameQuestions.Select((gq, idx) =>
-            {
-                var q = questions[idx];
-                var answers = JsonSerializer.Deserialize<string[]>(gq.ShuffledAnswersJson)!;
-                return new GameSessionQuestion
-                {
-                    QuestionId = q.Id,
-                    GameQuestionId = gq.Id,
-                    Text = q.Text,
-                    Answers = answers,
-                    CorrectAnswer = q.CorrectAnswer,
-                    CorrectAnswerIndex = Array.IndexOf(answers, q.CorrectAnswer),
-                    Explanation = q.Explanation,
-                    ImageUrl = q.ImageUrl
-                };
-            }).ToList()
+            Questions = creatorSessionQuestions
         };
 
         session.Players[creatorTelegramId] = new PlayerSession
@@ -225,7 +325,9 @@ public class GameService : IGameService
             FirstName = creator.FirstName,
             LastName = creator.LastName,
             CountryCode = creator.CountryCode,
-            GamePlayerId = creatorPlayer.Id
+            LanguageCode = creator.LanguageCode,
+            GamePlayerId = creatorPlayer.Id,
+            Questions = creatorSessionQuestions
         };
 
         session.Players[friendTelegramId] = new PlayerSession
@@ -236,7 +338,9 @@ public class GameService : IGameService
             FirstName = friend.FirstName,
             LastName = friend.LastName,
             CountryCode = friend.CountryCode,
-            GamePlayerId = friendPlayer.Id
+            LanguageCode = friend.LanguageCode,
+            GamePlayerId = friendPlayer.Id,
+            Questions = friendSessionQuestions
         };
 
         _sessionStore.AddSession(session);
@@ -268,6 +372,137 @@ public class GameService : IGameService
         _context.GamePlayers.Add(gamePlayer);
         await _context.SaveChangesAsync();
 
+        // Get the first player to determine their language
+        var firstPlayer = session.Players.Values.First();
+        var settings = await GetGameSettingsAsync();
+
+        List<GameSessionQuestion> playerQuestions;
+
+        // If both players have same language, use existing questions
+        if (user.LanguageCode == firstPlayer.LanguageCode)
+        {
+            // Same language - create questions with same text but shuffled answers
+            playerQuestions = firstPlayer.Questions.Select(q =>
+            {
+                var allAnswers = new List<string> { q.CorrectAnswer };
+                allAnswers.AddRange(q.Answers.Where(a => a != q.CorrectAnswer));
+                var answers = allAnswers.OrderBy(_ => Random.Shared.Next()).ToArray();
+                return new GameSessionQuestion
+                {
+                    QuestionId = q.QuestionId,
+                    GameQuestionId = q.GameQuestionId,
+                    TranslationGroupId = q.TranslationGroupId,
+                    Text = q.Text,
+                    Answers = answers,
+                    CorrectAnswer = q.CorrectAnswer,
+                    CorrectAnswerIndex = Array.IndexOf(answers, q.CorrectAnswer),
+                    Explanation = q.Explanation,
+                    ImageUrl = q.ImageUrl
+                };
+            }).ToList();
+        }
+        else
+        {
+            // Different languages - find translations of the SAME questions first player has
+            var translationGroupIds = firstPlayer.Questions
+                .Where(q => q.TranslationGroupId.HasValue)
+                .Select(q => q.TranslationGroupId!.Value)
+                .ToList();
+
+            if (translationGroupIds.Count > 0)
+            {
+                // Try to get translated versions of the same questions
+                var translatedQuestions = await _questionService.GetQuestionsByTranslationGroupIdsAsync(
+                    translationGroupIds, user.LanguageCode);
+
+                if (translatedQuestions.Count > 0)
+                {
+                    // Build a lookup for translated questions by TranslationGroupId
+                    var translatedByGroup = translatedQuestions.ToDictionary(q => q.TranslationGroupId!.Value);
+
+                    // Create questions for second player, matching by TranslationGroupId
+                    playerQuestions = firstPlayer.Questions.Select(originalQ =>
+                    {
+                        // Try to find translation
+                        if (originalQ.TranslationGroupId.HasValue &&
+                            translatedByGroup.TryGetValue(originalQ.TranslationGroupId.Value, out var translated))
+                        {
+                            var answers = translated.GetShuffledAnswers();
+                            return new GameSessionQuestion
+                            {
+                                QuestionId = translated.Id,
+                                GameQuestionId = originalQ.GameQuestionId,
+                                TranslationGroupId = translated.TranslationGroupId,
+                                Text = translated.Text,
+                                Answers = answers,
+                                CorrectAnswer = translated.CorrectAnswer,
+                                CorrectAnswerIndex = Array.IndexOf(answers, translated.CorrectAnswer),
+                                Explanation = translated.Explanation,
+                                ImageUrl = translated.ImageUrl
+                            };
+                        }
+                        else
+                        {
+                            // No translation found - use original question (player will see different language)
+                            var answers = originalQ.Answers.OrderBy(_ => Random.Shared.Next()).ToArray();
+                            return new GameSessionQuestion
+                            {
+                                QuestionId = originalQ.QuestionId,
+                                GameQuestionId = originalQ.GameQuestionId,
+                                TranslationGroupId = originalQ.TranslationGroupId,
+                                Text = originalQ.Text,
+                                Answers = answers,
+                                CorrectAnswer = originalQ.CorrectAnswer,
+                                CorrectAnswerIndex = Array.IndexOf(answers, originalQ.CorrectAnswer),
+                                Explanation = originalQ.Explanation,
+                                ImageUrl = originalQ.ImageUrl
+                            };
+                        }
+                    }).ToList();
+                }
+                else
+                {
+                    // No translations found at all - use original questions
+                    playerQuestions = firstPlayer.Questions.Select(q =>
+                    {
+                        var answers = q.Answers.OrderBy(_ => Random.Shared.Next()).ToArray();
+                        return new GameSessionQuestion
+                        {
+                            QuestionId = q.QuestionId,
+                            GameQuestionId = q.GameQuestionId,
+                            TranslationGroupId = q.TranslationGroupId,
+                            Text = q.Text,
+                            Answers = answers,
+                            CorrectAnswer = q.CorrectAnswer,
+                            CorrectAnswerIndex = Array.IndexOf(answers, q.CorrectAnswer),
+                            Explanation = q.Explanation,
+                            ImageUrl = q.ImageUrl
+                        };
+                    }).ToList();
+                }
+            }
+            else
+            {
+                // No TranslationGroupIds - questions don't have translations, use original
+                playerQuestions = firstPlayer.Questions.Select(q =>
+                {
+                    var answers = q.Answers.OrderBy(_ => Random.Shared.Next()).ToArray();
+                    return new GameSessionQuestion
+                    {
+                        QuestionId = q.QuestionId,
+                        GameQuestionId = q.GameQuestionId,
+                        TranslationGroupId = q.TranslationGroupId,
+                        Text = q.Text,
+                        Answers = answers,
+                        CorrectAnswer = q.CorrectAnswer,
+                        CorrectAnswerIndex = Array.IndexOf(answers, q.CorrectAnswer),
+                        Explanation = q.Explanation,
+                        ImageUrl = q.ImageUrl
+                    };
+                }).ToList();
+            }
+        }
+
         var playerSession = new PlayerSession
         {
             UserId = user.Id,
@@ -276,8 +511,10 @@ public class GameService : IGameService
             FirstName = user.FirstName,
             LastName = user.LastName,
             CountryCode = user.CountryCode,
+            LanguageCode = user.LanguageCode,
             GamePlayerId = gamePlayer.Id,
-            IsReady = false
+            IsReady = false,
+            Questions = playerQuestions
         };
 
         _sessionStore.AddPlayerToSession(gameId, playerSession);
@@ -350,6 +587,22 @@ public class GameService : IGameService
         return Task.FromResult<GameSessionQuestion?>(session.Questions[session.CurrentQuestionIndex]);
     }
 
+    public Task<GameSessionQuestion?> GetCurrentQuestionForPlayerAsync(int gameId, long telegramId)
+    {
+        var session = _sessionStore.GetSession(gameId);
+        if (session == null || session.CurrentQuestionIndex >= session.Questions.Count)
+            return Task.FromResult<GameSessionQuestion?>(null);
+
+        // Get player-specific question in their language
+        if (session.Players.TryGetValue(telegramId, out var player) && player.Questions.Count > session.CurrentQuestionIndex)
+        {
+            return Task.FromResult<GameSessionQuestion?>(player.Questions[session.CurrentQuestionIndex]);
+        }
+
+        // Fallback to session questions
+        return Task.FromResult<GameSessionQuestion?>(session.Questions[session.CurrentQuestionIndex]);
+    }
+
     public async Task<AnswerResult> SubmitAnswerAsync(int gameId, long telegramId, int answerIndex)
     {
         var session = _sessionStore.GetSession(gameId);
@@ -359,7 +612,10 @@ public class GameService : IGameService
         if (!session.Players.TryGetValue(telegramId, out var player))
             throw new InvalidOperationException("Player not in game");
 
-        var question = session.Questions[session.CurrentQuestionIndex];
+        // Use player's question in their language
+        var question = player.Questions.Count > session.CurrentQuestionIndex
+            ? player.Questions[session.CurrentQuestionIndex]
+            : session.Questions[session.CurrentQuestionIndex];
         var timeMs = (long)(DateTime.UtcNow - session.QuestionStartedAt!.Value).TotalMilliseconds;
         var isCorrect = answerIndex == question.CorrectAnswerIndex;
 

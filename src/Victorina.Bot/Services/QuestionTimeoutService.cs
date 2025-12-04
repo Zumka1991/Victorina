@@ -46,10 +46,17 @@ public class QuestionTimeoutService : BackgroundService
         }
     }
 
+    private async Task<string> GetUserLanguageAsync(long telegramId, IUserService userService)
+    {
+        var user = await userService.GetByTelegramIdAsync(telegramId);
+        return user?.LanguageCode ?? "ru";
+    }
+
     private async Task CheckTimeoutsAsync(CancellationToken ct)
     {
         using var scope = _serviceProvider.CreateScope();
         var gameService = scope.ServiceProvider.GetRequiredService<IGameService>();
+        var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
 
         var timeouts = await gameService.CheckAndHandleTimeoutsAsync();
         var processedGames = new HashSet<int>();
@@ -58,24 +65,26 @@ public class QuestionTimeoutService : BackgroundService
         {
             try
             {
+                var lang = await GetUserLanguageAsync(timeout.TelegramId, userService);
+
                 // Отправляем сообщение "Время вышло" только тому, кто не ответил
                 await _bot.SendMessage(
                     timeout.TelegramId,
-                    $"⏱ *Время вышло!*\n\nПравильный ответ: *{timeout.CorrectAnswer}*",
+                    LocalizationService.Get(lang, "time_up", timeout.CorrectAnswer),
                     parseMode: ParseMode.Markdown,
                     cancellationToken: ct);
 
                 if (timeout.GameResult != null)
                 {
                     // Отправляем результаты игры
-                    await SendGameResultAsync(timeout.TelegramId, timeout.GameResult, ct);
+                    await SendGameResultAsync(timeout.TelegramId, timeout.GameResult, userService, ct);
 
                     // Отправляем результаты игрокам, которые ответили вовремя (только один раз на игру)
                     if (!processedGames.Contains(timeout.GameId))
                     {
                         foreach (var waitingPlayer in timeout.PlayersWaitingForNextQuestion)
                         {
-                            await SendGameResultAsync(waitingPlayer, timeout.GameResult, ct);
+                            await SendGameResultAsync(waitingPlayer, timeout.GameResult, userService, ct);
                         }
                         processedGames.Add(timeout.GameId);
                     }
@@ -86,21 +95,32 @@ public class QuestionTimeoutService : BackgroundService
                     var session = await gameService.GetGameByIdAsync(timeout.GameId);
                     if (session != null && session.Status == Domain.Enums.GameStatus.InProgress)
                     {
-                        var nextQuestion = session.Questions[session.CurrentQuestionIndex];
-
                         await Task.Delay(1500, ct);
 
-                        // Отправляем следующий вопрос тому, у кого вышло время
-                        await SendQuestionAsync(timeout.TelegramId, nextQuestion,
-                            session.CurrentQuestionIndex + 1, session.Questions.Count, ct);
+                        // Отправляем следующий вопрос тому, у кого вышло время (в его языке)
+                        if (session.Players.TryGetValue(timeout.TelegramId, out var timeoutPlayer))
+                        {
+                            var playerQuestion = timeoutPlayer.Questions.Count > session.CurrentQuestionIndex
+                                ? timeoutPlayer.Questions[session.CurrentQuestionIndex]
+                                : session.Questions[session.CurrentQuestionIndex];
+                            await SendQuestionAsync(timeout.TelegramId, lang, playerQuestion,
+                                session.CurrentQuestionIndex + 1, session.Questions.Count, ct);
+                        }
 
                         // Отправляем следующий вопрос игрокам, которые ответили вовремя (только один раз на игру)
                         if (!processedGames.Contains(timeout.GameId))
                         {
-                            foreach (var waitingPlayer in timeout.PlayersWaitingForNextQuestion)
+                            foreach (var waitingPlayerId in timeout.PlayersWaitingForNextQuestion)
                             {
-                                await SendQuestionAsync(waitingPlayer, nextQuestion,
-                                    session.CurrentQuestionIndex + 1, session.Questions.Count, ct);
+                                if (session.Players.TryGetValue(waitingPlayerId, out var waitingPlayer))
+                                {
+                                    var playerQuestion = waitingPlayer.Questions.Count > session.CurrentQuestionIndex
+                                        ? waitingPlayer.Questions[session.CurrentQuestionIndex]
+                                        : session.Questions[session.CurrentQuestionIndex];
+                                    var playerLang = await GetUserLanguageAsync(waitingPlayerId, userService);
+                                    await SendQuestionAsync(waitingPlayerId, playerLang, playerQuestion,
+                                        session.CurrentQuestionIndex + 1, session.Questions.Count, ct);
+                                }
                             }
                             processedGames.Add(timeout.GameId);
                         }
@@ -114,10 +134,10 @@ public class QuestionTimeoutService : BackgroundService
         }
     }
 
-    private async Task SendQuestionAsync(long chatId, Application.Models.GameSessionQuestion question,
+    private async Task SendQuestionAsync(long chatId, string lang, Application.Models.GameSessionQuestion question,
         int questionNumber, int totalQuestions, CancellationToken ct)
     {
-        var questionText = $"❓ *Вопрос {questionNumber}/{totalQuestions}*\n\n{question.Text}";
+        var questionText = LocalizationService.Get(lang, "question", questionNumber, totalQuestions) + $"\n\n{question.Text}";
 
         if (!string.IsNullOrEmpty(question.ImageUrl))
         {
@@ -132,50 +152,51 @@ public class QuestionTimeoutService : BackgroundService
             cancellationToken: ct);
     }
 
-    private async Task SendGameResultAsync(long telegramId, GameResult result, CancellationToken ct)
+    private async Task SendGameResultAsync(long telegramId, GameResult result, IUserService userService, CancellationToken ct)
     {
+        var lang = await GetUserLanguageAsync(telegramId, userService);
         var playerResult = result.Player1.TelegramId == telegramId ? result.Player1 : result.Player2;
         var opponent = result.Player1.TelegramId == telegramId ? result.Player2 : result.Player1;
 
         var isWinner = result.WinnerTelegramId == telegramId;
 
-        string emoji, title;
+        string title;
         if (result.IsDraw)
         {
-            emoji = "🤝";
-            title = "Ничья!";
+            title = LocalizationService.Get(lang, "draw");
         }
         else if (isWinner)
         {
-            emoji = "🏆";
-            title = "Вы победили!";
+            title = LocalizationService.Get(lang, "you_won");
         }
         else
         {
-            emoji = "😔";
-            title = "Вы проиграли";
+            title = LocalizationService.Get(lang, "you_lost");
         }
 
         var opponentFlag = CountryService.GetFlag(opponent.CountryCode);
         var opponentName = opponent.GetDisplayName();
 
-        var message = $"{emoji} *{title}*\n\n" +
-                     $"📊 *Ваш результат:*\n" +
-                     $"✅ Правильных: {playerResult.CorrectAnswers}\n" +
-                     $"⏱ Время: {playerResult.TotalTime.TotalSeconds:F2} сек\n\n" +
-                     $"📊 *Соперник:* {opponentFlag} {opponentName}\n" +
-                     $"✅ Правильных: {opponent.CorrectAnswers}\n" +
-                     $"⏱ Время: {opponent.TotalTime.TotalSeconds:F2} сек";
+        var message = $"{title}\n\n" +
+                     LocalizationService.Get(lang, "your_result") + $"\n" +
+                     LocalizationService.Get(lang, "correct_answers", playerResult.CorrectAnswers) + $"\n" +
+                     LocalizationService.Get(lang, "time_spent", playerResult.TotalTime.TotalSeconds.ToString("F2")) + $"\n\n" +
+                     LocalizationService.Get(lang, "opponent_result", opponentFlag, opponentName) + $"\n" +
+                     LocalizationService.Get(lang, "correct_answers", opponent.CorrectAnswers) + $"\n" +
+                     LocalizationService.Get(lang, "time_spent", opponent.TotalTime.TotalSeconds.ToString("F2"));
 
         if (!result.IsDraw)
         {
-            message += $"\n\n_{result.WinReason}_";
+            var winReason = result.WinReason?.Contains("ответ") == true || result.WinReason?.Contains("answer") == true
+                ? LocalizationService.Get(lang, "win_by_answers")
+                : LocalizationService.Get(lang, "win_by_time");
+            message += $"\n\n_{winReason}_";
         }
 
         await _bot.SendMessage(telegramId,
             message,
             parseMode: ParseMode.Markdown,
-            replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+            replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
             cancellationToken: ct);
     }
 }

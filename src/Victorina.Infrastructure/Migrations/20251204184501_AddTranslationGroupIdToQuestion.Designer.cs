@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Victorina.Infrastructure.Data;
@@ -11,9 +12,11 @@ using Victorina.Infrastructure.Data;
 namespace Victorina.Infrastructure.Migrations
 {
     [DbContext(typeof(VictorinaDbContext))]
-    partial class VictorinaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251204184501_AddTranslationGroupIdToQuestion")]
+    partial class AddTranslationGroupIdToQuestion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,9 +54,6 @@ namespace Victorina.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
-
-                    b.Property<Guid?>("TranslationGroupId")
-                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 

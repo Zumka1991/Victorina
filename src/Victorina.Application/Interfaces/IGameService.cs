@@ -13,6 +13,7 @@ public interface IGameService
     Task<GameSession?> GetActiveGameAsync(long telegramId);
     Task<GameSession?> GetGameByIdAsync(int gameId);
     Task<GameSessionQuestion?> GetCurrentQuestionAsync(int gameId);
+    Task<GameSessionQuestion?> GetCurrentQuestionForPlayerAsync(int gameId, long telegramId);
     Task<AnswerResult> SubmitAnswerAsync(int gameId, long telegramId, int answerIndex);
     Task<bool> MoveToNextQuestionAsync(int gameId);
     Task<GameResult?> FinishGameAsync(int gameId);

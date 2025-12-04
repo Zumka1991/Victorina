@@ -87,6 +87,16 @@ public class UserService : IUserService
         }
     }
 
+    public async Task UpdateLanguageAsync(int userId, string languageCode)
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user != null)
+        {
+            user.LanguageCode = languageCode;
+            await _context.SaveChangesAsync();
+        }
+    }
+
     public async Task UpdateLastActiveAsync(int userId)
     {
         var user = await _context.Users.FindAsync(userId);

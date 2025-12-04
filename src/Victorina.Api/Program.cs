@@ -96,17 +96,25 @@ app.MapPost("/api/upload", async (HttpRequest request) =>
 }).WithTags("Upload").DisableAntiforgery();
 
 // Categories
-app.MapGet("/api/categories", async (VictorinaDbContext db) =>
+app.MapGet("/api/categories", async (VictorinaDbContext db, string? languageCode) =>
 {
-    var categories = await db.Categories
-        .Where(c => c.IsActive)
-        .OrderBy(c => c.Name)
+    var query = db.Categories.Where(c => c.IsActive);
+
+    if (!string.IsNullOrEmpty(languageCode))
+        query = query.Where(c => c.LanguageCode == languageCode);
+
+    var categories = await query
+        .OrderBy(c => c.TranslationGroupId)
+        .ThenBy(c => c.LanguageCode)
+        .ThenBy(c => c.Name)
         .Select(c => new
         {
             c.Id,
             c.Name,
             c.Description,
             c.Emoji,
+            c.LanguageCode,
+            c.TranslationGroupId,
             QuestionsCount = c.Questions.Count(q => q.IsActive)
         })
         .ToListAsync();
@@ -115,16 +123,29 @@ app.MapGet("/api/categories", async (VictorinaDbContext db) =>
 
 app.MapPost("/api/categories", async (VictorinaDbContext db, CategoryDto dto) =>
 {
+    // If TranslationGroupId is provided, use it; otherwise generate a new one
+    var translationGroupId = dto.TranslationGroupId ?? Guid.NewGuid();
+
     var category = new Victorina.Domain.Entities.Category
     {
         Name = dto.Name,
         Description = dto.Description,
         Emoji = dto.Emoji,
+        LanguageCode = dto.LanguageCode ?? "ru",
+        TranslationGroupId = translationGroupId,
         IsActive = true
     };
     db.Categories.Add(category);
     await db.SaveChangesAsync();
-    return Results.Created($"/api/categories/{category.Id}", category);
+    return Results.Created($"/api/categories/{category.Id}", new
+    {
+        category.Id,
+        category.Name,
+        category.Description,
+        category.Emoji,
+        category.LanguageCode,
+        category.TranslationGroupId
+    });
 }).WithTags("Categories");
 
 app.MapPut("/api/categories/{id}", async (VictorinaDbContext db, int id, CategoryDto dto) =>
@@ -135,8 +156,19 @@ app.MapPut("/api/categories/{id}", async (VictorinaDbContext db, int id, Categor
     category.Name = dto.Name;
     category.Description = dto.Description;
     category.Emoji = dto.Emoji;
+    category.LanguageCode = dto.LanguageCode ?? category.LanguageCode;
+    if (dto.TranslationGroupId.HasValue)
+        category.TranslationGroupId = dto.TranslationGroupId;
     await db.SaveChangesAsync();
-    return Results.Ok(category);
+    return Results.Ok(new
+    {
+        category.Id,
+        category.Name,
+        category.Description,
+        category.Emoji,
+        category.LanguageCode,
+        category.TranslationGroupId
+    });
 }).WithTags("Categories");
 
 app.MapDelete("/api/categories/{id}", async (VictorinaDbContext db, int id) =>
@@ -149,8 +181,27 @@ app.MapDelete("/api/categories/{id}", async (VictorinaDbContext db, int id) =>
     return Results.NoContent();
 }).WithTags("Categories");
 
+// Get all translations for a category group
+app.MapGet("/api/categories/translations/{translationGroupId}", async (VictorinaDbContext db, Guid translationGroupId) =>
+{
+    var translations = await db.Categories
+        .Where(c => c.IsActive && c.TranslationGroupId == translationGroupId)
+        .Select(c => new
+        {
+            c.Id,
+            c.Name,
+            c.Description,
+            c.Emoji,
+            c.LanguageCode,
+            c.TranslationGroupId,
+            QuestionsCount = c.Questions.Count(q => q.IsActive)
+        })
+        .ToListAsync();
+    return Results.Ok(translations);
+}).WithTags("Categories");
+
 // Questions
-app.MapGet("/api/questions", async (VictorinaDbContext db, int? categoryId, int page = 1, int pageSize = 20) =>
+app.MapGet("/api/questions", async (VictorinaDbContext db, int? categoryId, string? languageCode, int page = 1, int pageSize = 20) =>
 {
     var query = db.Questions
         .Include(q => q.Category)
@@ -159,9 +210,14 @@ app.MapGet("/api/questions", async (VictorinaDbContext db, int? categoryId, int 
     if (categoryId.HasValue)
         query = query.Where(q => q.CategoryId == categoryId.Value);
 
+    if (!string.IsNullOrEmpty(languageCode))
+        query = query.Where(q => q.LanguageCode == languageCode);
+
     var total = await query.CountAsync();
     var questions = await query
-        .OrderByDescending(q => q.CreatedAt)
+        .OrderBy(q => q.TranslationGroupId)
+        .ThenBy(q => q.LanguageCode)
+        .ThenByDescending(q => q.CreatedAt)
         .Skip((page - 1) * pageSize)
         .Take(pageSize)
         .Select(q => new
@@ -174,6 +230,8 @@ app.MapGet("/api/questions", async (VictorinaDbContext db, int? categoryId, int 
             q.WrongAnswer3,
             q.Explanation,
             q.ImageUrl,
+            q.LanguageCode,
+            q.TranslationGroupId,
             Category = q.Category.Name,
             q.CategoryId,
             q.CreatedAt
@@ -185,6 +243,9 @@ app.MapGet("/api/questions", async (VictorinaDbContext db, int? categoryId, int 
 
 app.MapPost("/api/questions", async (VictorinaDbContext db, QuestionDto dto) =>
 {
+    // If TranslationGroupId is provided, use it; otherwise generate a new one for this question
+    var translationGroupId = dto.TranslationGroupId ?? Guid.NewGuid();
+
     var question = new Victorina.Domain.Entities.Question
     {
         CategoryId = dto.CategoryId,
@@ -195,11 +256,26 @@ app.MapPost("/api/questions", async (VictorinaDbContext db, QuestionDto dto) =>
         WrongAnswer3 = dto.WrongAnswer3,
         Explanation = dto.Explanation,
         ImageUrl = dto.ImageUrl,
+        LanguageCode = dto.LanguageCode ?? "ru",
+        TranslationGroupId = translationGroupId,
         IsActive = true
     };
     db.Questions.Add(question);
     await db.SaveChangesAsync();
-    return Results.Created($"/api/questions/{question.Id}", question);
+    return Results.Created($"/api/questions/{question.Id}", new
+    {
+        question.Id,
+        question.CategoryId,
+        question.Text,
+        question.CorrectAnswer,
+        question.WrongAnswer1,
+        question.WrongAnswer2,
+        question.WrongAnswer3,
+        question.Explanation,
+        question.ImageUrl,
+        question.LanguageCode,
+        question.TranslationGroupId
+    });
 }).WithTags("Questions");
 
 app.MapPut("/api/questions/{id}", async (VictorinaDbContext db, int id, QuestionDto dto) =>
@@ -215,6 +291,9 @@ app.MapPut("/api/questions/{id}", async (VictorinaDbContext db, int id, Question
     question.WrongAnswer3 = dto.WrongAnswer3;
     question.Explanation = dto.Explanation;
     question.ImageUrl = dto.ImageUrl;
+    question.LanguageCode = dto.LanguageCode ?? question.LanguageCode;
+    if (dto.TranslationGroupId.HasValue)
+        question.TranslationGroupId = dto.TranslationGroupId;
     await db.SaveChangesAsync();
     return Results.Ok(question);
 }).WithTags("Questions");
@@ -227,6 +306,32 @@ app.MapDelete("/api/questions/{id}", async (VictorinaDbContext db, int id) =>
     question.IsActive = false;
     await db.SaveChangesAsync();
     return Results.NoContent();
+}).WithTags("Questions");
+
+// Get all translations for a question group
+app.MapGet("/api/questions/translations/{translationGroupId}", async (VictorinaDbContext db, Guid translationGroupId) =>
+{
+    var translations = await db.Questions
+        .Include(q => q.Category)
+        .Where(q => q.IsActive && q.TranslationGroupId == translationGroupId)
+        .Select(q => new
+        {
+            q.Id,
+            q.Text,
+            q.CorrectAnswer,
+            q.WrongAnswer1,
+            q.WrongAnswer2,
+            q.WrongAnswer3,
+            q.Explanation,
+            q.ImageUrl,
+            q.LanguageCode,
+            q.TranslationGroupId,
+            Category = q.Category.Name,
+            q.CategoryId,
+            q.CreatedAt
+        })
+        .ToListAsync();
+    return Results.Ok(translations);
 }).WithTags("Questions");
 
 // Statistics
@@ -357,6 +462,6 @@ app.MapPost("/api/seed/reset", async (VictorinaDbContext db) =>
 app.Run();
 
 // DTOs
-record CategoryDto(string Name, string? Description, string? Emoji);
-record QuestionDto(int CategoryId, string Text, string CorrectAnswer, string WrongAnswer1, string WrongAnswer2, string WrongAnswer3, string? Explanation, string? ImageUrl);
+record CategoryDto(string Name, string? Description, string? Emoji, string? LanguageCode, Guid? TranslationGroupId);
+record QuestionDto(int CategoryId, string Text, string CorrectAnswer, string WrongAnswer1, string WrongAnswer2, string WrongAnswer3, string? Explanation, string? ImageUrl, string? LanguageCode, Guid? TranslationGroupId);
 record SettingDto(string Value);

@@ -8,13 +8,13 @@ public class KeyboardService
 {
     // ============ REPLY KEYBOARDS (постоянные кнопки внизу) ============
 
-    public ReplyKeyboardMarkup GetMainMenuReplyKeyboard()
+    public ReplyKeyboardMarkup GetMainMenuReplyKeyboard(string lang)
     {
         return new ReplyKeyboardMarkup(new[]
         {
-            new KeyboardButton[] { "🎮 Играть" },
-            new KeyboardButton[] { "👤 Мой профиль", "🏆 Лидеры" },
-            new KeyboardButton[] { "❓ Помощь" }
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_play") },
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_profile"), LocalizationService.Get(lang, "btn_leaders") },
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_help") }
         })
         {
             ResizeKeyboard = true,
@@ -22,61 +22,61 @@ public class KeyboardService
         };
     }
 
-    public ReplyKeyboardMarkup GetProfileMenuReplyKeyboard()
+    public ReplyKeyboardMarkup GetProfileMenuReplyKeyboard(string lang)
     {
         return new ReplyKeyboardMarkup(new[]
         {
-            new KeyboardButton[] { "📊 Статистика", "🌍 Страна" },
-            new KeyboardButton[] { "👥 Друзья" },
-            new KeyboardButton[] { "🔙 Назад" }
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_statistics"), LocalizationService.Get(lang, "btn_language") },
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_friends") },
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_back") }
         })
         {
             ResizeKeyboard = true
         };
     }
 
-    public ReplyKeyboardMarkup GetPlayMenuReplyKeyboard()
+    public ReplyKeyboardMarkup GetPlayMenuReplyKeyboard(string lang)
     {
         return new ReplyKeyboardMarkup(new[]
         {
-            new KeyboardButton[] { "⚡ Быстрая игра" },
-            new KeyboardButton[] { "👤 Играть с другом" },
-            new KeyboardButton[] { "🔙 Назад" }
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_quick_game") },
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_play_with_friend") },
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_back") }
         })
         {
             ResizeKeyboard = true
         };
     }
 
-    public ReplyKeyboardMarkup GetFriendsMenuReplyKeyboard()
+    public ReplyKeyboardMarkup GetFriendsMenuReplyKeyboard(string lang)
     {
         return new ReplyKeyboardMarkup(new[]
         {
-            new KeyboardButton[] { "📋 Мои друзья" },
-            new KeyboardButton[] { "➕ Добавить друга", "📩 Запросы" },
-            new KeyboardButton[] { "🔙 В профиль" }
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_my_friends") },
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_add_friend"), LocalizationService.Get(lang, "btn_requests") },
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_back_to_profile") }
         })
         {
             ResizeKeyboard = true
         };
     }
 
-    public ReplyKeyboardMarkup GetCancelReplyKeyboard()
+    public ReplyKeyboardMarkup GetCancelReplyKeyboard(string lang)
     {
         return new ReplyKeyboardMarkup(new[]
         {
-            new KeyboardButton[] { "❌ Отмена" }
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_cancel") }
         })
         {
             ResizeKeyboard = true
         };
     }
 
-    public ReplyKeyboardMarkup GetGameReplyKeyboard()
+    public ReplyKeyboardMarkup GetGameReplyKeyboard(string lang)
     {
         return new ReplyKeyboardMarkup(new[]
         {
-            new KeyboardButton[] { "❌ Покинуть игру" }
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_leave_game") }
         })
         {
             ResizeKeyboard = true
@@ -85,30 +85,30 @@ public class KeyboardService
 
     // ============ INLINE KEYBOARDS (кнопки в сообщениях) ============
 
-    public InlineKeyboardMarkup GetPlayInlineKeyboard()
+    public InlineKeyboardMarkup GetPlayInlineKeyboard(string lang)
     {
         return new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData("⚡ Быстрая игра", CallbackData.QuickGame) },
-            new[] { InlineKeyboardButton.WithCallbackData("👤 Играть с другом", CallbackData.PlayWithFriend) }
+            new[] { InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_quick_game"), CallbackData.QuickGame) },
+            new[] { InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_play_with_friend"), CallbackData.PlayWithFriend) }
         });
     }
 
-    public InlineKeyboardMarkup GetSearchingKeyboard()
+    public InlineKeyboardMarkup GetSearchingKeyboard(string lang)
     {
         return new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData("🔄 Проверить", CallbackData.CheckGame) },
-            new[] { InlineKeyboardButton.WithCallbackData("❌ Отмена", CallbackData.CancelGame) }
+            new[] { InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_check_opponent"), CallbackData.CheckGame) },
+            new[] { InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_cancel"), CallbackData.CancelGame) }
         });
     }
 
-    public InlineKeyboardMarkup GetReadyKeyboard()
+    public InlineKeyboardMarkup GetReadyKeyboard(string lang)
     {
         return new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData("✅ Готов!", CallbackData.Ready) },
-            new[] { InlineKeyboardButton.WithCallbackData("❌ Отмена", CallbackData.CancelGame) }
+            new[] { InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_ready"), CallbackData.Ready) },
+            new[] { InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_cancel"), CallbackData.CancelGame) }
         });
     }
 
@@ -130,15 +130,15 @@ public class KeyboardService
         return new InlineKeyboardMarkup(buttons);
     }
 
-    public InlineKeyboardMarkup GetWaitingOpponentKeyboard()
+    public InlineKeyboardMarkup GetWaitingOpponentKeyboard(string lang)
     {
         return new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData("🔄 Проверить", CallbackData.CheckOpponent) }
+            new[] { InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_check_opponent"), CallbackData.CheckOpponent) }
         });
     }
 
-    public InlineKeyboardMarkup GetFriendsListKeyboard(IList<User> friends)
+    public InlineKeyboardMarkup GetFriendsListKeyboard(IList<User> friends, string lang)
     {
         var buttons = new List<InlineKeyboardButton[]>();
 
@@ -146,7 +146,7 @@ public class KeyboardService
         {
             var displayName = !string.IsNullOrEmpty(friend.Username)
                 ? $"@{friend.Username}"
-                : friend.FirstName ?? "Друг";
+                : friend.FirstName ?? LocalizationService.Get(lang, "player");
 
             buttons.Add(new[]
             {
@@ -158,13 +158,13 @@ public class KeyboardService
 
         buttons.Add(new[]
         {
-            InlineKeyboardButton.WithCallbackData("🔙 Назад", CallbackData.Friends)
+            InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_back"), CallbackData.Friends)
         });
 
         return new InlineKeyboardMarkup(buttons);
     }
 
-    public InlineKeyboardMarkup GetFriendRequestsKeyboard(IList<Friendship> requests)
+    public InlineKeyboardMarkup GetFriendRequestsKeyboard(IList<Friendship> requests, string lang)
     {
         var buttons = new List<InlineKeyboardButton[]>();
 
@@ -172,7 +172,7 @@ public class KeyboardService
         {
             var displayName = !string.IsNullOrEmpty(req.Requester.Username)
                 ? $"@{req.Requester.Username}"
-                : req.Requester.FirstName ?? "Игрок";
+                : req.Requester.FirstName ?? LocalizationService.Get(lang, "player");
 
             buttons.Add(new[]
             {
@@ -180,79 +180,54 @@ public class KeyboardService
             });
             buttons.Add(new[]
             {
-                InlineKeyboardButton.WithCallbackData("✅ Принять", $"{CallbackData.AcceptFriend}{req.Id}"),
-                InlineKeyboardButton.WithCallbackData("❌ Отклонить", $"{CallbackData.RejectFriend}{req.Id}")
+                InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_accept"), $"{CallbackData.AcceptFriend}{req.Id}"),
+                InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_reject"), $"{CallbackData.RejectFriend}{req.Id}")
             });
         }
 
         buttons.Add(new[]
         {
-            InlineKeyboardButton.WithCallbackData("🔙 Назад", CallbackData.Friends)
+            InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_back"), CallbackData.Friends)
         });
 
         return new InlineKeyboardMarkup(buttons);
     }
 
-    public InlineKeyboardMarkup GetBackToMenuKeyboard()
+    public InlineKeyboardMarkup GetBackToMenuKeyboard(string lang)
     {
         return new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData("🏠 В меню", CallbackData.BackToMenu) }
+            new[] { InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_to_menu"), CallbackData.BackToMenu) }
         });
     }
 
-    public InlineKeyboardMarkup GetCountrySelectionKeyboard()
+    public InlineKeyboardMarkup GetLanguageSelectionKeyboard(string lang)
     {
         return new InlineKeyboardMarkup(new[]
         {
             new[]
             {
-                InlineKeyboardButton.WithCallbackData("🇷🇺 Россия", $"{CallbackData.SelectCountry}RU"),
-                InlineKeyboardButton.WithCallbackData("🇺🇦 Украина", $"{CallbackData.SelectCountry}UA")
+                InlineKeyboardButton.WithCallbackData("🇷🇺 Русский", $"{CallbackData.SelectLanguage}ru"),
+                InlineKeyboardButton.WithCallbackData("🇮🇳 हिन्दी", $"{CallbackData.SelectLanguage}hi")
             },
             new[]
             {
-                InlineKeyboardButton.WithCallbackData("🇧🇾 Беларусь", $"{CallbackData.SelectCountry}BY"),
-                InlineKeyboardButton.WithCallbackData("🇰🇿 Казахстан", $"{CallbackData.SelectCountry}KZ")
+                InlineKeyboardButton.WithCallbackData("🇧🇷 Português", $"{CallbackData.SelectLanguage}pt"),
+                InlineKeyboardButton.WithCallbackData("🇮🇷 فارسی", $"{CallbackData.SelectLanguage}fa")
             },
             new[]
             {
-                InlineKeyboardButton.WithCallbackData("🇺🇿 Узбекистан", $"{CallbackData.SelectCountry}UZ"),
-                InlineKeyboardButton.WithCallbackData("🇦🇿 Азербайджан", $"{CallbackData.SelectCountry}AZ")
+                InlineKeyboardButton.WithCallbackData("🇩🇪 Deutsch", $"{CallbackData.SelectLanguage}de"),
+                InlineKeyboardButton.WithCallbackData("🇺🇿 O'zbek", $"{CallbackData.SelectLanguage}uz")
             },
             new[]
             {
-                InlineKeyboardButton.WithCallbackData("🇬🇪 Грузия", $"{CallbackData.SelectCountry}GE"),
-                InlineKeyboardButton.WithCallbackData("🇦🇲 Армения", $"{CallbackData.SelectCountry}AM")
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("🇲🇩 Молдова", $"{CallbackData.SelectCountry}MD"),
-                InlineKeyboardButton.WithCallbackData("🇰🇬 Кыргызстан", $"{CallbackData.SelectCountry}KG")
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("🇩🇪 Германия", $"{CallbackData.SelectCountry}DE"),
-                InlineKeyboardButton.WithCallbackData("🇵🇱 Польша", $"{CallbackData.SelectCountry}PL")
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("🇺🇸 США", $"{CallbackData.SelectCountry}US"),
-                InlineKeyboardButton.WithCallbackData("🇬🇧 Великобритания", $"{CallbackData.SelectCountry}GB")
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("🇮🇱 Израиль", $"{CallbackData.SelectCountry}IL"),
-                InlineKeyboardButton.WithCallbackData("🌍 Другая", $"{CallbackData.SelectCountry}OTHER")
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("🔙 Назад", CallbackData.BackToProfile)
+                InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_back"), CallbackData.BackToProfile)
             }
         });
     }
 
-    public InlineKeyboardMarkup GetCategorySelectionKeyboard(IList<Category> categories, bool forFriend = false, int? friendId = null)
+    public InlineKeyboardMarkup GetCategorySelectionKeyboard(IList<Category> categories, string lang, bool forFriend = false, int? friendId = null)
     {
         var prefix = forFriend ? $"{CallbackData.SelectCategoryForFriend}{friendId}_" : CallbackData.SelectCategory;
         var buttons = new List<InlineKeyboardButton[]>();
@@ -260,7 +235,7 @@ public class KeyboardService
         // Кнопка "Любая категория"
         buttons.Add(new[]
         {
-            InlineKeyboardButton.WithCallbackData("🎲 Любая категория", $"{prefix}0")
+            InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "any_category"), $"{prefix}0")
         });
 
         // Категории по 2 в ряд
@@ -285,7 +260,7 @@ public class KeyboardService
 
         buttons.Add(new[]
         {
-            InlineKeyboardButton.WithCallbackData("🔙 Назад", CallbackData.BackToMenu)
+            InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_back"), CallbackData.BackToMenu)
         });
 
         return new InlineKeyboardMarkup(buttons);

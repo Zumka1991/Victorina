@@ -76,181 +76,226 @@ public class UpdateHandler
 
         var chatId = message.Chat.Id;
         var state = _userState.GetState(telegramUser.Id);
+        var lang = user.LanguageCode;
 
         // Обработка состояния поиска друга
         if (state == UserState.WaitingForFriendSearch)
         {
-            if (text == "🔙 Назад" || text == "❌ Отмена" || text == "🔙 В профиль")
+            // Check for back/cancel buttons in any language
+            if (IsBackButton(text) || IsCancelButton(text) || IsBackToProfileButton(text))
             {
                 _userState.ClearState(telegramUser.Id);
-                await SendFriendsMenu(chatId, ct);
+                await SendFriendsMenu(chatId, lang, ct);
                 return;
             }
-            await HandleFriendSearchAsync(chatId, telegramUser.Id, user.Id, text, ct);
+            await HandleFriendSearchAsync(chatId, telegramUser.Id, user.Id, lang, text, ct);
             return;
         }
 
-        // Обработка Reply-кнопок
-        switch (text)
+        // Обработка Reply-кнопок - проверяем на всех языках
+        if (text == "/start" || text == "/menu" || IsBackButton(text))
         {
-            case "/start":
-            case "/menu":
-            case "🔙 Назад":
-                await SendMainMenu(chatId, ct);
-                break;
-
-            case "🔙 В профиль":
-                await SendProfileMenu(chatId, ct);
-                break;
-
-            case "🎮 Играть":
-                await SendPlayMenu(chatId, ct);
-                break;
-
-            case "⚡ Быстрая игра":
-                await SendCategorySelectionAsync(chatId, questionService, false, null, ct);
-                break;
-
-            case "👤 Играть с другом":
-                await HandlePlayWithFriendReplyAsync(chatId, user.Id, friendshipService, ct);
-                break;
-
-            case "👤 Мой профиль":
-                await SendProfileMenu(chatId, ct);
-                break;
-
-            case "📊 Статистика":
-                await HandleStatisticsReplyAsync(chatId, telegramUser.Id, gameService, ct);
-                break;
-
-            case "🌍 Страна":
-                await HandleCountrySelectionAsync(chatId, user, ct);
-                break;
-
-            case "🏆 Лидеры":
-                await HandleLeaderboardReplyAsync(chatId, telegramUser.Id, gameService, ct);
-                break;
-
-            case "👥 Друзья":
-                await SendFriendsMenu(chatId, ct);
-                break;
-
-            case "📋 Мои друзья":
-                await HandleFriendsListReplyAsync(chatId, user.Id, friendshipService, ct);
-                break;
-
-            case "➕ Добавить друга":
-                _userState.SetState(telegramUser.Id, UserState.WaitingForFriendSearch);
-                await _bot.SendMessage(chatId,
-                    "🔍 Введите @username или номер телефона друга:",
-                    replyMarkup: _keyboard.GetCancelReplyKeyboard(),
-                    cancellationToken: ct);
-                break;
-
-            case "📩 Запросы":
-                await HandleFriendRequestsReplyAsync(chatId, user.Id, friendshipService, ct);
-                break;
-
-            case "❌ Отмена":
-            case "❌ Покинуть игру":
-                var activeGame = await gameService.GetActiveGameAsync(telegramUser.Id);
-                if (activeGame != null)
+            await SendMainMenu(chatId, lang, ct);
+        }
+        else if (IsBackToProfileButton(text))
+        {
+            await SendProfileMenu(chatId, lang, ct);
+        }
+        else if (IsPlayButton(text))
+        {
+            await SendPlayMenu(chatId, lang, ct);
+        }
+        else if (IsQuickGameButton(text))
+        {
+            await SendCategorySelectionAsync(chatId, lang, questionService, false, null, ct);
+        }
+        else if (IsPlayWithFriendButton(text))
+        {
+            await HandlePlayWithFriendReplyAsync(chatId, user.Id, lang, friendshipService, ct);
+        }
+        else if (IsProfileButton(text))
+        {
+            await SendProfileMenu(chatId, lang, ct);
+        }
+        else if (IsStatisticsButton(text))
+        {
+            await HandleStatisticsReplyAsync(chatId, telegramUser.Id, lang, gameService, ct);
+        }
+        else if (IsLanguageButton(text))
+        {
+            await HandleLanguageSelectionAsync(chatId, user, ct);
+        }
+        else if (IsLeadersButton(text))
+        {
+            await HandleLeaderboardReplyAsync(chatId, telegramUser.Id, lang, gameService, ct);
+        }
+        else if (IsFriendsButton(text))
+        {
+            await SendFriendsMenu(chatId, lang, ct);
+        }
+        else if (IsMyFriendsButton(text))
+        {
+            await HandleFriendsListReplyAsync(chatId, user.Id, lang, friendshipService, ct);
+        }
+        else if (IsAddFriendButton(text))
+        {
+            _userState.SetState(telegramUser.Id, UserState.WaitingForFriendSearch);
+            await _bot.SendMessage(chatId,
+                LocalizationService.Get(lang, "friend_search"),
+                replyMarkup: _keyboard.GetCancelReplyKeyboard(lang),
+                cancellationToken: ct);
+        }
+        else if (IsRequestsButton(text))
+        {
+            await HandleFriendRequestsReplyAsync(chatId, user.Id, lang, friendshipService, ct);
+        }
+        else if (IsCancelButton(text) || IsLeaveGameButton(text))
+        {
+            var activeGame = await gameService.GetActiveGameAsync(telegramUser.Id);
+            if (activeGame != null)
+            {
+                await gameService.CancelGameAsync(activeGame.GameId);
+                foreach (var player in activeGame.Players.Values.Where(p => p.TelegramId != telegramUser.Id))
                 {
-                    await gameService.CancelGameAsync(activeGame.GameId);
-                    foreach (var player in activeGame.Players.Values.Where(p => p.TelegramId != telegramUser.Id))
-                    {
-                        await _bot.SendMessage(player.TelegramId,
-                            "😔 Соперник покинул игру.",
-                            replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
-                            cancellationToken: ct);
-                    }
+                    var opponentLang = await GetUserLanguageAsync(player.TelegramId, userService);
+                    await _bot.SendMessage(player.TelegramId,
+                        LocalizationService.Get(opponentLang, "opponent_left"),
+                        replyMarkup: _keyboard.GetMainMenuReplyKeyboard(opponentLang),
+                        cancellationToken: ct);
                 }
-                await SendMainMenu(chatId, ct);
-                break;
-
-            case "/help":
-            case "❓ Помощь":
-                await _bot.SendMessage(chatId,
-                    "🎯 *Викторина* — игра, где вы соревнуетесь с друзьями!\n\n" +
-                    "🎮 *Как играть:*\n" +
-                    "1. Нажмите «Играть»\n" +
-                    "2. Выберите быструю игру или играйте с другом\n" +
-                    "3. Отвечайте на вопросы быстрее соперника!\n\n" +
-                    "🏆 Побеждает тот, кто даст больше правильных ответов. При равенстве — кто быстрее!",
-                    parseMode: ParseMode.Markdown,
-                    replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
-                    cancellationToken: ct);
-                break;
-
-            default:
-                if (text.StartsWith("/"))
-                {
-                    await SendMainMenu(chatId, ct);
-                }
-                break;
+            }
+            await SendMainMenu(chatId, lang, ct);
+        }
+        else if (text == "/help" || IsHelpButton(text))
+        {
+            await _bot.SendMessage(chatId,
+                LocalizationService.Get(lang, "help"),
+                parseMode: ParseMode.Markdown,
+                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
+                cancellationToken: ct);
+        }
+        else if (text.StartsWith("/"))
+        {
+            await SendMainMenu(chatId, lang, ct);
         }
     }
 
-    private async Task SendMainMenu(long chatId, CancellationToken ct)
+    // Button detection helpers - check all languages
+    private static bool IsBackButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_back"));
+
+    private static bool IsBackToProfileButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_back_to_profile"));
+
+    private static bool IsPlayButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_play"));
+
+    private static bool IsQuickGameButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_quick_game"));
+
+    private static bool IsPlayWithFriendButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_play_with_friend"));
+
+    private static bool IsProfileButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_profile"));
+
+    private static bool IsStatisticsButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_statistics"));
+
+    private static bool IsLanguageButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_language"));
+
+    private static bool IsLeadersButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_leaders"));
+
+    private static bool IsFriendsButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_friends"));
+
+    private static bool IsMyFriendsButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_my_friends"));
+
+    private static bool IsAddFriendButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_add_friend"));
+
+    private static bool IsRequestsButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_requests"));
+
+    private static bool IsCancelButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_cancel"));
+
+    private static bool IsLeaveGameButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_leave_game"));
+
+    private static bool IsHelpButton(string text) =>
+        LocalizationService.Languages.Keys.Any(l => text == LocalizationService.Get(l, "btn_help"));
+
+    private async Task<string> GetUserLanguageAsync(long telegramId, IUserService userService)
+    {
+        var user = await userService.GetByTelegramIdAsync(telegramId);
+        return user?.LanguageCode ?? "ru";
+    }
+
+    private async Task SendMainMenu(long chatId, string lang, CancellationToken ct)
     {
         await _bot.SendMessage(chatId,
-            "🎯 *Викторина*\n\nВыберите действие:",
+            LocalizationService.Get(lang, "welcome"),
             parseMode: ParseMode.Markdown,
-            replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+            replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
             cancellationToken: ct);
     }
 
-    private async Task SendPlayMenu(long chatId, CancellationToken ct)
+    private async Task SendPlayMenu(long chatId, string lang, CancellationToken ct)
     {
         await _bot.SendMessage(chatId,
-            "🎮 *Выберите режим игры:*",
+            LocalizationService.Get(lang, "play_menu"),
             parseMode: ParseMode.Markdown,
-            replyMarkup: _keyboard.GetPlayMenuReplyKeyboard(),
+            replyMarkup: _keyboard.GetPlayMenuReplyKeyboard(lang),
             cancellationToken: ct);
     }
 
-    private async Task SendProfileMenu(long chatId, CancellationToken ct)
+    private async Task SendProfileMenu(long chatId, string lang, CancellationToken ct)
     {
         await _bot.SendMessage(chatId,
-            "👤 *Мой профиль*\n\nВыберите раздел:",
+            LocalizationService.Get(lang, "profile_menu"),
             parseMode: ParseMode.Markdown,
-            replyMarkup: _keyboard.GetProfileMenuReplyKeyboard(),
+            replyMarkup: _keyboard.GetProfileMenuReplyKeyboard(lang),
             cancellationToken: ct);
     }
 
-    private async Task SendFriendsMenu(long chatId, CancellationToken ct)
+    private async Task SendFriendsMenu(long chatId, string lang, CancellationToken ct)
     {
         await _bot.SendMessage(chatId,
-            "👥 *Друзья*\n\nВыберите действие:",
+            LocalizationService.Get(lang, "friends_menu"),
             parseMode: ParseMode.Markdown,
-            replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(),
+            replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
             cancellationToken: ct);
     }
 
-    private async Task SendCategorySelectionAsync(long chatId, IQuestionService questionService,
+    private async Task SendCategorySelectionAsync(long chatId, string lang, IQuestionService questionService,
         bool forFriend, int? friendId, CancellationToken ct)
     {
-        var categories = await questionService.GetCategoriesAsync();
+        var categories = await questionService.GetCategoriesAsync(lang);
         var message = forFriend
-            ? "📚 *Выберите категорию для игры с другом:*"
-            : "📚 *Выберите категорию:*";
+            ? LocalizationService.Get(lang, "select_category_friend")
+            : LocalizationService.Get(lang, "select_category");
 
         await _bot.SendMessage(chatId,
             message,
             parseMode: ParseMode.Markdown,
-            replyMarkup: _keyboard.GetCategorySelectionKeyboard(categories, forFriend, friendId),
+            replyMarkup: _keyboard.GetCategorySelectionKeyboard(categories, lang, forFriend, friendId),
             cancellationToken: ct);
     }
 
-    private async Task HandleQuickGameReplyAsync(long chatId, long telegramId,
-        int? categoryId, IGameService gameService, CancellationToken ct)
+    private async Task HandleQuickGameReplyAsync(long chatId, long telegramId, string lang,
+        int? categoryId, IGameService gameService, IUserService userService, IQuestionService questionService,
+        CancellationToken ct)
     {
         var activeGame = await gameService.GetActiveGameAsync(telegramId);
         if (activeGame != null)
         {
             await _bot.SendMessage(chatId,
-                "⚠️ У вас уже есть активная игра!",
-                replyMarkup: _keyboard.GetGameReplyKeyboard(),
+                LocalizationService.Get(lang, "active_game_exists"),
+                replyMarkup: _keyboard.GetGameReplyKeyboard(lang),
                 cancellationToken: ct);
             return;
         }
@@ -268,20 +313,31 @@ public class UpdateHandler
             var currentPlayerFlag = CountryService.GetFlag(currentPlayer.CountryCode);
             var currentPlayerName = currentPlayer.GetDisplayName();
 
-            var categoryInfo = session.CategoryName != null
-                ? $"\n📚 Категория: *{session.CategoryName}*"
+            // Get category name in current player's language
+            var categoryName = await questionService.GetCategoryNameAsync(
+                session.CategoryTranslationGroupId, session.CategoryId, lang);
+            var categoryInfo = categoryName != null
+                ? LocalizationService.Get(lang, "category_info", categoryName)
                 : "";
 
             await _bot.SendMessage(chatId,
-                $"🎮 *Соперник найден!*\n\n{opponentFlag} *{opponentName}*{categoryInfo}\n\nНажмите «Готов» чтобы начать!",
+                $"{LocalizationService.Get(lang, "opponent_found")}\n\n{opponentFlag} *{opponentName}*{categoryInfo}\n\n{LocalizationService.Get(lang, "btn_ready")}!",
                 parseMode: ParseMode.Markdown,
-                replyMarkup: _keyboard.GetReadyKeyboard(),
+                replyMarkup: _keyboard.GetReadyKeyboard(lang),
                 cancellationToken: ct);
 
+            var opponentLang = await GetUserLanguageAsync(opponent.TelegramId, userService);
+            // Get category name in opponent's language
+            var opponentCategoryName = await questionService.GetCategoryNameAsync(
+                session.CategoryTranslationGroupId, session.CategoryId, opponentLang);
+            var opponentCategoryInfo = opponentCategoryName != null
+                ? LocalizationService.Get(opponentLang, "category_info", opponentCategoryName)
+                : "";
+
             await _bot.SendMessage(opponent.TelegramId,
-                $"🎮 *Соперник найден!*\n\n{currentPlayerFlag} *{currentPlayerName}*{categoryInfo}\n\nНажмите «Готов» чтобы начать!",
+                $"{LocalizationService.Get(opponentLang, "opponent_found")}\n\n{currentPlayerFlag} *{currentPlayerName}*{opponentCategoryInfo}\n\n{LocalizationService.Get(opponentLang, "btn_ready")}!",
                 parseMode: ParseMode.Markdown,
-                replyMarkup: _keyboard.GetReadyKeyboard(),
+                replyMarkup: _keyboard.GetReadyKeyboard(opponentLang),
                 cancellationToken: ct);
         }
         else
@@ -289,34 +345,31 @@ public class UpdateHandler
             await gameService.CreateQuickGameAsync(telegramId, categoryId);
 
             var waitingText = categoryId.HasValue
-                ? "🔍 *Ищем соперника в этой категории...*\n\nПодождите, пока кто-то присоединится."
-                : "🔍 *Ищем соперника...*\n\nПодождите, пока кто-то присоединится.";
+                ? LocalizationService.Get(lang, "searching_category")
+                : LocalizationService.Get(lang, "searching_opponent");
 
             await _bot.SendMessage(chatId,
                 waitingText,
                 parseMode: ParseMode.Markdown,
-                replyMarkup: _keyboard.GetSearchingKeyboard(),
+                replyMarkup: _keyboard.GetSearchingKeyboard(lang),
                 cancellationToken: ct);
         }
     }
 
-    private async Task HandleStatisticsReplyAsync(long chatId, long telegramId,
+    private async Task HandleStatisticsReplyAsync(long chatId, long telegramId, string lang,
         IGameService gameService, CancellationToken ct)
     {
         var stats = await gameService.GetUserStatsAsync(telegramId);
 
         await _bot.SendMessage(chatId,
-            $"📊 *Ваша статистика*\n\n" +
-            $"🎮 Игр сыграно: *{stats.GamesPlayed}*\n" +
-            $"🏆 Побед: *{stats.GamesWon}*\n" +
-            $"📈 Процент побед: *{stats.WinRate:F1}%*\n" +
-            $"✅ Правильных ответов: *{stats.TotalCorrectAnswers}*",
+            LocalizationService.Get(lang, "your_statistics",
+                stats.GamesPlayed, stats.GamesWon, stats.WinRate.ToString("F1"), stats.TotalCorrectAnswers),
             parseMode: ParseMode.Markdown,
-            replyMarkup: _keyboard.GetProfileMenuReplyKeyboard(),
+            replyMarkup: _keyboard.GetProfileMenuReplyKeyboard(lang),
             cancellationToken: ct);
     }
 
-    private async Task HandleLeaderboardReplyAsync(long chatId, long telegramId,
+    private async Task HandleLeaderboardReplyAsync(long chatId, long telegramId, string lang,
         IGameService gameService, CancellationToken ct)
     {
         var leaderboard = await gameService.GetLeaderboardAsync(10);
@@ -325,58 +378,55 @@ public class UpdateHandler
         if (leaderboard.Count == 0)
         {
             await _bot.SendMessage(chatId,
-                "🏆 *Таблица лидеров*\n\nПока нет игроков с завершёнными играми.\n\nСыграйте первую игру!",
+                LocalizationService.Get(lang, "leaderboard_empty"),
                 parseMode: ParseMode.Markdown,
-                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
                 cancellationToken: ct);
             return;
         }
 
         var medals = new[] { "🥇", "🥈", "🥉" };
-        var message = "🏆 *Таблица лидеров*\n\n";
+        var message = LocalizationService.Get(lang, "leaderboard") + "\n\n";
 
         foreach (var entry in leaderboard)
         {
             var medal = entry.Rank <= 3 ? medals[entry.Rank - 1] : $"{entry.Rank}.";
-            var name = !string.IsNullOrEmpty(entry.Username) ? $"@{entry.Username}" : entry.FirstName ?? "Игрок";
+            var name = !string.IsNullOrEmpty(entry.Username) ? $"@{entry.Username}" : entry.FirstName ?? LocalizationService.Get(lang, "player");
             message += $"{medal} *{name}*\n" +
-                      $"    🏆 {entry.GamesWon} побед • 🎮 {entry.GamesPlayed} игр • {entry.WinRate:F0}%\n\n";
+                      $"    🏆 {entry.GamesWon} {LocalizationService.Get(lang, "wins")} • 🎮 {entry.GamesPlayed} {LocalizationService.Get(lang, "games")} • {entry.WinRate:F0}%\n\n";
         }
 
         if (userRank.HasValue)
         {
             message += $"━━━━━━━━━━━━━━━\n" +
-                      $"📍 *Ваша позиция:* #{userRank.Value.Rank}\n" +
-                      $"🏆 {userRank.Value.Stats.GamesWon} побед из {userRank.Value.Stats.GamesPlayed} игр";
+                      LocalizationService.Get(lang, "your_position", userRank.Value.Rank) + $"\n" +
+                      $"🏆 {userRank.Value.Stats.GamesWon} {LocalizationService.Get(lang, "wins")} / {userRank.Value.Stats.GamesPlayed} {LocalizationService.Get(lang, "games")}";
         }
         else
         {
             message += $"━━━━━━━━━━━━━━━\n" +
-                      $"📍 Сыграйте игру, чтобы попасть в рейтинг!";
+                      LocalizationService.Get(lang, "play_to_rank");
         }
 
         await _bot.SendMessage(chatId,
             message,
             parseMode: ParseMode.Markdown,
-            replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+            replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
             cancellationToken: ct);
     }
 
-    private async Task HandleCountrySelectionAsync(long chatId, Domain.Entities.User user, CancellationToken ct)
+    private async Task HandleLanguageSelectionAsync(long chatId, Domain.Entities.User user, CancellationToken ct)
     {
-        var currentFlag = CountryService.GetFlag(user.CountryCode);
-        var currentCountry = CountryService.GetCountryName(user.CountryCode);
+        var (flag, name) = LocalizationService.GetLanguageInfo(user.LanguageCode);
 
         await _bot.SendMessage(chatId,
-            $"🌍 *Выбор страны*\n\n" +
-            $"Текущая страна: {currentFlag} {currentCountry}\n\n" +
-            $"Выберите свою страну:",
+            LocalizationService.Get(user.LanguageCode, "language_selection", flag, name),
             parseMode: ParseMode.Markdown,
-            replyMarkup: _keyboard.GetCountrySelectionKeyboard(),
+            replyMarkup: _keyboard.GetLanguageSelectionKeyboard(user.LanguageCode),
             cancellationToken: ct);
     }
 
-    private async Task HandleFriendsListReplyAsync(long chatId, int userId,
+    private async Task HandleFriendsListReplyAsync(long chatId, int userId, string lang,
         IFriendshipService friendshipService, CancellationToken ct)
     {
         var friends = await friendshipService.GetFriendsAsync(userId);
@@ -384,21 +434,21 @@ public class UpdateHandler
         if (friends.Count == 0)
         {
             await _bot.SendMessage(chatId,
-                "😔 У вас пока нет друзей.\n\nНажмите «Добавить друга» чтобы найти игроков!",
-                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(),
+                LocalizationService.Get(lang, "no_friends"),
+                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
                 cancellationToken: ct);
         }
         else
         {
             await _bot.SendMessage(chatId,
-                "👥 *Ваши друзья:*\n\nВыберите друга для игры:",
+                LocalizationService.Get(lang, "select_friend"),
                 parseMode: ParseMode.Markdown,
-                replyMarkup: _keyboard.GetFriendsListKeyboard(friends),
+                replyMarkup: _keyboard.GetFriendsListKeyboard(friends, lang),
                 cancellationToken: ct);
         }
     }
 
-    private async Task HandleFriendRequestsReplyAsync(long chatId, int userId,
+    private async Task HandleFriendRequestsReplyAsync(long chatId, int userId, string lang,
         IFriendshipService friendshipService, CancellationToken ct)
     {
         var requests = await friendshipService.GetPendingRequestsAsync(userId);
@@ -406,21 +456,21 @@ public class UpdateHandler
         if (requests.Count == 0)
         {
             await _bot.SendMessage(chatId,
-                "📭 Нет входящих запросов в друзья.",
-                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(),
+                LocalizationService.Get(lang, "no_requests"),
+                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
                 cancellationToken: ct);
         }
         else
         {
             await _bot.SendMessage(chatId,
-                "📩 *Входящие запросы:*",
+                LocalizationService.Get(lang, "incoming_requests"),
                 parseMode: ParseMode.Markdown,
-                replyMarkup: _keyboard.GetFriendRequestsKeyboard(requests),
+                replyMarkup: _keyboard.GetFriendRequestsKeyboard(requests, lang),
                 cancellationToken: ct);
         }
     }
 
-    private async Task HandlePlayWithFriendReplyAsync(long chatId, int userId,
+    private async Task HandlePlayWithFriendReplyAsync(long chatId, int userId, string lang,
         IFriendshipService friendshipService, CancellationToken ct)
     {
         var friends = await friendshipService.GetFriendsAsync(userId);
@@ -428,16 +478,16 @@ public class UpdateHandler
         if (friends.Count == 0)
         {
             await _bot.SendMessage(chatId,
-                "😔 У вас пока нет друзей.\n\nСначала добавьте друзей в разделе «Друзья»!",
-                replyMarkup: _keyboard.GetPlayMenuReplyKeyboard(),
+                LocalizationService.Get(lang, "no_friends_for_game"),
+                replyMarkup: _keyboard.GetPlayMenuReplyKeyboard(lang),
                 cancellationToken: ct);
         }
         else
         {
             await _bot.SendMessage(chatId,
-                "👤 *Выберите друга для игры:*",
+                LocalizationService.Get(lang, "select_friend"),
                 parseMode: ParseMode.Markdown,
-                replyMarkup: _keyboard.GetFriendsListKeyboard(friends),
+                replyMarkup: _keyboard.GetFriendsListKeyboard(friends, lang),
                 cancellationToken: ct);
         }
     }
@@ -461,76 +511,78 @@ public class UpdateHandler
             callback.From.FirstName,
             callback.From.LastName);
 
+        var lang = user.LanguageCode;
+
         try
         {
             switch (data)
             {
                 case CallbackData.QuickGame:
-                    await SendCategorySelectionAsync(chatId, questionService, false, null, ct);
+                    await SendCategorySelectionAsync(chatId, lang, questionService, false, null, ct);
                     break;
 
                 case CallbackData.CheckGame:
-                    await HandleCheckGameAsync(chatId, messageId, telegramId, gameService, ct);
+                    await HandleCheckGameAsync(chatId, messageId, telegramId, lang, gameService, userService, ct);
                     break;
 
                 case CallbackData.Ready:
-                    await HandleReadyAsync(chatId, messageId, telegramId, gameService, ct);
+                    await HandleReadyAsync(chatId, messageId, telegramId, lang, gameService, userService, ct);
                     break;
 
                 case CallbackData.CheckOpponent:
-                    await HandleCheckOpponentAsync(chatId, messageId, telegramId, gameService, ct);
+                    await HandleCheckOpponentAsync(chatId, messageId, telegramId, lang, gameService, ct);
                     break;
 
                 case CallbackData.CancelGame:
-                    await HandleCancelGameAsync(chatId, messageId, telegramId, gameService, ct);
+                    await HandleCancelGameAsync(chatId, messageId, telegramId, lang, gameService, userService, ct);
                     break;
 
                 case CallbackData.PlayWithFriend:
-                    await HandlePlayWithFriendReplyAsync(chatId, user.Id, friendshipService, ct);
+                    await HandlePlayWithFriendReplyAsync(chatId, user.Id, lang, friendshipService, ct);
                     break;
 
                 case CallbackData.Friends:
-                    await SendFriendsMenu(chatId, ct);
+                    await SendFriendsMenu(chatId, lang, ct);
                     break;
 
                 case CallbackData.BackToMenu:
                     _userState.ClearState(telegramId);
-                    await SendMainMenu(chatId, ct);
+                    await SendMainMenu(chatId, lang, ct);
                     break;
 
                 case CallbackData.BackToProfile:
-                    await SendProfileMenu(chatId, ct);
+                    await SendProfileMenu(chatId, lang, ct);
                     break;
 
                 default:
                     if (data.StartsWith(CallbackData.SelectCategory))
                     {
-                        await HandleSelectCategoryAsync(chatId, messageId, telegramId, data, gameService, ct);
+                        await HandleSelectCategoryAsync(chatId, messageId, telegramId, lang, data, gameService, userService, questionService, ct);
                     }
                     else if (data.StartsWith(CallbackData.SelectCategoryForFriend))
                     {
-                        await HandleSelectCategoryForFriendAsync(chatId, messageId, telegramId, data,
-                            gameService, userService, ct);
+                        await HandleSelectCategoryForFriendAsync(chatId, messageId, telegramId, lang, data,
+                            gameService, userService, questionService, ct);
                     }
-                    else if (data.StartsWith(CallbackData.SelectCountry))
+                    else if (data.StartsWith(CallbackData.SelectLanguage))
                     {
-                        await HandleSelectCountryAsync(chatId, messageId, user.Id, data, userService, ct);
+                        await HandleSelectLanguageAsync(chatId, messageId, user.Id, data, userService, ct);
                     }
                     else if (data.StartsWith(CallbackData.Answer))
                     {
-                        await HandleAnswerAsync(chatId, messageId, telegramId, data, gameService, ct);
+                        await HandleAnswerAsync(chatId, messageId, telegramId, lang, data, gameService, userService, ct);
                     }
                     else if (data.StartsWith(CallbackData.AcceptFriend))
                     {
-                        await HandleAcceptFriendAsync(chatId, messageId, user.Id, data, friendshipService, ct);
+                        await HandleAcceptFriendAsync(chatId, messageId, user.Id, lang, data, friendshipService, ct);
                     }
                     else if (data.StartsWith(CallbackData.RejectFriend))
                     {
-                        await HandleRejectFriendAsync(chatId, messageId, user.Id, data, friendshipService, ct);
+                        await HandleRejectFriendAsync(chatId, messageId, user.Id, lang, data, friendshipService, ct);
                     }
                     else if (data.StartsWith(CallbackData.InviteFriend))
                     {
-                        await HandleInviteFriendAsync(chatId, messageId, telegramId, user.Id, data,
+                        await HandleInviteFriendAsync(chatId, messageId, telegramId, user.Id, lang, data,
                             gameService, userService, questionService, ct);
                     }
                     break;
@@ -541,20 +593,20 @@ public class UpdateHandler
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling callback {Data}", data);
-            await _bot.AnswerCallbackQuery(callback.Id, "Произошла ошибка", cancellationToken: ct);
+            await _bot.AnswerCallbackQuery(callback.Id, "Error", cancellationToken: ct);
         }
     }
 
-    private async Task HandleCheckGameAsync(long chatId, int messageId, long telegramId,
-        IGameService gameService, CancellationToken ct)
+    private async Task HandleCheckGameAsync(long chatId, int messageId, long telegramId, string lang,
+        IGameService gameService, IUserService userService, CancellationToken ct)
     {
         var session = await gameService.GetActiveGameAsync(telegramId);
 
         if (session == null)
         {
             await _bot.SendMessage(chatId,
-                "❌ Игра не найдена.",
-                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+                LocalizationService.Get(lang, "game_not_found"),
+                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
                 cancellationToken: ct);
             return;
         }
@@ -562,7 +614,8 @@ public class UpdateHandler
         if (session.Status == GameStatus.WaitingForPlayers)
         {
             await _bot.SendMessage(chatId,
-                "🔍 Пока ищем соперника... Подождите немного.",
+                LocalizationService.Get(lang, "searching_opponent"),
+                parseMode: ParseMode.Markdown,
                 cancellationToken: ct);
         }
         else if (session.Status == GameStatus.WaitingForReady)
@@ -571,15 +624,15 @@ public class UpdateHandler
             var opponentFlag = CountryService.GetFlag(opponent.CountryCode);
             var opponentName = opponent.GetDisplayName();
             await _bot.SendMessage(chatId,
-                $"🎮 Соперник найден!\n\n{opponentFlag} *{opponentName}*\n\nНажмите «Готов»!",
+                $"{LocalizationService.Get(lang, "opponent_found")}\n\n{opponentFlag} *{opponentName}*\n\n{LocalizationService.Get(lang, "btn_ready")}!",
                 parseMode: ParseMode.Markdown,
-                replyMarkup: _keyboard.GetReadyKeyboard(),
+                replyMarkup: _keyboard.GetReadyKeyboard(lang),
                 cancellationToken: ct);
         }
     }
 
-    private async Task HandleReadyAsync(long chatId, int messageId, long telegramId,
-        IGameService gameService, CancellationToken ct)
+    private async Task HandleReadyAsync(long chatId, int messageId, long telegramId, string lang,
+        IGameService gameService, IUserService userService, CancellationToken ct)
     {
         var session = await gameService.GetActiveGameAsync(telegramId);
         if (session == null) return;
@@ -590,32 +643,36 @@ public class UpdateHandler
 
         if (session.Status == GameStatus.InProgress)
         {
-            var question = session.Questions[0];
-
             foreach (var player in session.Players.Values)
             {
+                // Get first question in player's language
+                var playerQuestion = player.Questions.Count > 0
+                    ? player.Questions[0]
+                    : session.Questions[0];
+
+                var playerLang = await GetUserLanguageAsync(player.TelegramId, userService);
                 await _bot.SendMessage(player.TelegramId,
-                    "🚀 *Игра начинается!*",
+                    LocalizationService.Get(playerLang, "game_starting"),
                     parseMode: ParseMode.Markdown,
-                    replyMarkup: _keyboard.GetGameReplyKeyboard(),
+                    replyMarkup: _keyboard.GetGameReplyKeyboard(playerLang),
                     cancellationToken: ct);
 
                 await Task.Delay(1000, ct);
 
-                await SendQuestionAsync(player.TelegramId, question, 1, session.Questions.Count, ct);
+                await SendQuestionAsync(player.TelegramId, playerLang, playerQuestion, 1, session.Questions.Count, ct);
             }
         }
         else
         {
             await _bot.SendMessage(chatId,
-                "✅ Вы готовы! Ожидаем соперника...",
-                replyMarkup: _keyboard.GetWaitingOpponentKeyboard(),
+                LocalizationService.Get(lang, "waiting_ready"),
+                replyMarkup: _keyboard.GetWaitingOpponentKeyboard(lang),
                 cancellationToken: ct);
         }
     }
 
-    private async Task HandleAnswerAsync(long chatId, int messageId, long telegramId, string data,
-        IGameService gameService, CancellationToken ct)
+    private async Task HandleAnswerAsync(long chatId, int messageId, long telegramId, string lang, string data,
+        IGameService gameService, IUserService userService, CancellationToken ct)
     {
         var answerIndex = int.Parse(data.Replace(CallbackData.Answer, ""));
 
@@ -623,15 +680,18 @@ public class UpdateHandler
         if (session == null || session.Status != GameStatus.InProgress) return;
 
         // Получаем текущий вопрос до ответа, чтобы знать есть ли картинка
-        var currentQuestion = session.Questions[session.CurrentQuestionIndex];
+        var currentPlayer = session.Players[telegramId];
+        var currentQuestion = currentPlayer.Questions.Count > session.CurrentQuestionIndex
+            ? currentPlayer.Questions[session.CurrentQuestionIndex]
+            : session.Questions[session.CurrentQuestionIndex];
         var hasImage = !string.IsNullOrEmpty(currentQuestion.ImageUrl);
 
         var result = await gameService.SubmitAnswerAsync(session.GameId, telegramId, answerIndex);
 
         var emoji = result.IsCorrect ? "✅" : "❌";
-        var resultText = $"{emoji} {(result.IsCorrect ? "Правильно!" : "Неверно!")}\n\n" +
-            $"Правильный ответ: *{result.CorrectAnswer}*\n" +
-            $"⏱ Ваше время: {result.TimeMs / 1000.0:F2} сек";
+        var resultText = $"{emoji} {(result.IsCorrect ? LocalizationService.Get(lang, "correct") : LocalizationService.Get(lang, "incorrect"))}\n\n" +
+            LocalizationService.Get(lang, "correct_answer", result.CorrectAnswer) + "\n" +
+            LocalizationService.Get(lang, "your_time", (result.TimeMs / 1000.0).ToString("F2"));
 
         if (hasImage)
         {
@@ -661,7 +721,7 @@ public class UpdateHandler
                 var gameResult = await gameService.FinishGameAsync(session.GameId);
                 if (gameResult != null)
                 {
-                    await SendGameResultsAsync(gameResult, ct);
+                    await SendGameResultsAsync(gameResult, userService, ct);
                 }
             }
             else
@@ -671,12 +731,16 @@ public class UpdateHandler
 
                 if (session != null)
                 {
-                    var nextQuestion = session.Questions[session.CurrentQuestionIndex];
-
                     foreach (var p in session.Players.Values)
                     {
+                        // Get question in player's language
+                        var playerQuestion = p.Questions.Count > session.CurrentQuestionIndex
+                            ? p.Questions[session.CurrentQuestionIndex]
+                            : session.Questions[session.CurrentQuestionIndex];
+
+                        var pLang = await GetUserLanguageAsync(p.TelegramId, userService);
                         await Task.Delay(1500, ct);
-                        await SendQuestionAsync(p.TelegramId, nextQuestion,
+                        await SendQuestionAsync(p.TelegramId, pLang, playerQuestion,
                             session.CurrentQuestionIndex + 1, session.Questions.Count, ct);
                     }
                 }
@@ -686,13 +750,13 @@ public class UpdateHandler
         {
             await Task.Delay(500, ct);
             await _bot.SendMessage(chatId,
-                "⏳ Ожидаем ответ соперника...",
-                replyMarkup: _keyboard.GetWaitingOpponentKeyboard(),
+                LocalizationService.Get(lang, "opponent_answering"),
+                replyMarkup: _keyboard.GetWaitingOpponentKeyboard(lang),
                 cancellationToken: ct);
         }
     }
 
-    private async Task HandleCheckOpponentAsync(long chatId, int messageId, long telegramId,
+    private async Task HandleCheckOpponentAsync(long chatId, int messageId, long telegramId, string lang,
         IGameService gameService, CancellationToken ct)
     {
         var session = await gameService.GetActiveGameAsync(telegramId);
@@ -706,25 +770,28 @@ public class UpdateHandler
         {
             if (session.CurrentQuestionIndex < session.Questions.Count)
             {
-                var question = session.Questions[session.CurrentQuestionIndex];
-                await SendQuestionAsync(chatId, question,
+                // Get question in player's language
+                var question = player.Questions.Count > session.CurrentQuestionIndex
+                    ? player.Questions[session.CurrentQuestionIndex]
+                    : session.Questions[session.CurrentQuestionIndex];
+                await SendQuestionAsync(chatId, lang, question,
                     session.CurrentQuestionIndex + 1, session.Questions.Count, ct);
             }
         }
         else
         {
             await _bot.SendMessage(chatId,
-                "⏳ Соперник ещё отвечает...",
+                LocalizationService.Get(lang, "opponent_still_answering"),
                 cancellationToken: ct);
         }
     }
 
     private static readonly HttpClient _httpClient = new();
 
-    private async Task SendQuestionAsync(long chatId, Application.Models.GameSessionQuestion question,
+    private async Task SendQuestionAsync(long chatId, string lang, Application.Models.GameSessionQuestion question,
         int questionNumber, int totalQuestions, CancellationToken ct)
     {
-        var questionText = $"❓ *Вопрос {questionNumber}/{totalQuestions}*\n\n{question.Text}";
+        var questionText = LocalizationService.Get(lang, "question", questionNumber, totalQuestions) + $"\n\n{question.Text}";
 
         if (!string.IsNullOrEmpty(question.ImageUrl))
         {
@@ -769,56 +836,57 @@ public class UpdateHandler
         }
     }
 
-    private async Task SendGameResultsAsync(Application.Models.GameResult result, CancellationToken ct)
+    private async Task SendGameResultsAsync(Application.Models.GameResult result, IUserService userService, CancellationToken ct)
     {
         foreach (var playerResult in new[] { result.Player1, result.Player2 })
         {
+            var lang = await GetUserLanguageAsync(playerResult.TelegramId, userService);
             var isWinner = result.WinnerTelegramId == playerResult.TelegramId;
             var opponent = playerResult == result.Player1 ? result.Player2 : result.Player1;
 
-            string emoji, title;
+            string title;
             if (result.IsDraw)
             {
-                emoji = "🤝";
-                title = "Ничья!";
+                title = LocalizationService.Get(lang, "draw");
             }
             else if (isWinner)
             {
-                emoji = "🏆";
-                title = "Вы победили!";
+                title = LocalizationService.Get(lang, "you_won");
             }
             else
             {
-                emoji = "😔";
-                title = "Вы проиграли";
+                title = LocalizationService.Get(lang, "you_lost");
             }
 
             var opponentFlag = CountryService.GetFlag(opponent.CountryCode);
             var opponentName = opponent.GetDisplayName();
 
-            var message = $"{emoji} *{title}*\n\n" +
-                         $"📊 *Ваш результат:*\n" +
-                         $"✅ Правильных: {playerResult.CorrectAnswers}\n" +
-                         $"⏱ Время: {playerResult.TotalTime.TotalSeconds:F2} сек\n\n" +
-                         $"📊 *Соперник:* {opponentFlag} {opponentName}\n" +
-                         $"✅ Правильных: {opponent.CorrectAnswers}\n" +
-                         $"⏱ Время: {opponent.TotalTime.TotalSeconds:F2} сек";
+            var message = $"{title}\n\n" +
+                         LocalizationService.Get(lang, "your_result") + $"\n" +
+                         LocalizationService.Get(lang, "correct_answers", playerResult.CorrectAnswers) + $"\n" +
+                         LocalizationService.Get(lang, "time_spent", playerResult.TotalTime.TotalSeconds.ToString("F2")) + $"\n\n" +
+                         LocalizationService.Get(lang, "opponent_result", opponentFlag, opponentName) + $"\n" +
+                         LocalizationService.Get(lang, "correct_answers", opponent.CorrectAnswers) + $"\n" +
+                         LocalizationService.Get(lang, "time_spent", opponent.TotalTime.TotalSeconds.ToString("F2"));
 
             if (!result.IsDraw)
             {
-                message += $"\n\n_{result.WinReason}_";
+                var winReason = result.WinReason?.Contains("ответ") == true || result.WinReason?.Contains("answer") == true
+                    ? LocalizationService.Get(lang, "win_by_answers")
+                    : LocalizationService.Get(lang, "win_by_time");
+                message += $"\n\n_{winReason}_";
             }
 
             await _bot.SendMessage(playerResult.TelegramId,
                 message,
                 parseMode: ParseMode.Markdown,
-                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
                 cancellationToken: ct);
         }
     }
 
-    private async Task HandleCancelGameAsync(long chatId, int messageId, long telegramId,
-        IGameService gameService, CancellationToken ct)
+    private async Task HandleCancelGameAsync(long chatId, int messageId, long telegramId, string lang,
+        IGameService gameService, IUserService userService, CancellationToken ct)
     {
         var session = await gameService.GetActiveGameAsync(telegramId);
         if (session != null)
@@ -827,20 +895,21 @@ public class UpdateHandler
 
             foreach (var player in session.Players.Values.Where(p => p.TelegramId != telegramId))
             {
+                var playerLang = await GetUserLanguageAsync(player.TelegramId, userService);
                 await _bot.SendMessage(player.TelegramId,
-                    "😔 Соперник отменил игру.",
-                    replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+                    LocalizationService.Get(playerLang, "opponent_cancelled"),
+                    replyMarkup: _keyboard.GetMainMenuReplyKeyboard(playerLang),
                     cancellationToken: ct);
             }
         }
 
         await _bot.SendMessage(chatId,
-            "❌ Игра отменена.",
-            replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+            LocalizationService.Get(lang, "game_cancelled"),
+            replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
             cancellationToken: ct);
     }
 
-    private async Task HandleFriendSearchAsync(long chatId, long telegramId, int userId,
+    private async Task HandleFriendSearchAsync(long chatId, long telegramId, int userId, string lang,
         string searchText, CancellationToken ct)
     {
         using var scope = _serviceProvider.CreateScope();
@@ -856,8 +925,8 @@ public class UpdateHandler
         if (foundUser == null || foundUser.Id == userId)
         {
             await _bot.SendMessage(chatId,
-                "❌ Пользователь не найден.",
-                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(),
+                LocalizationService.Get(lang, "friend_not_found"),
+                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
                 cancellationToken: ct);
             return;
         }
@@ -866,8 +935,8 @@ public class UpdateHandler
         if (areFriends)
         {
             await _bot.SendMessage(chatId,
-                "👥 Вы уже друзья!",
-                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(),
+                LocalizationService.Get(lang, "already_friends"),
+                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
                 cancellationToken: ct);
             return;
         }
@@ -876,49 +945,50 @@ public class UpdateHandler
         if (request != null)
         {
             await _bot.SendMessage(chatId,
-                "✅ Запрос в друзья отправлен!",
-                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(),
+                LocalizationService.Get(lang, "friend_request_sent"),
+                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
                 cancellationToken: ct);
 
+            var foundUserLang = foundUser.LanguageCode;
             await _bot.SendMessage(foundUser.TelegramId,
-                "📩 У вас новый запрос в друзья!",
-                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(),
+                LocalizationService.Get(foundUserLang, "new_friend_request"),
+                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(foundUserLang),
                 cancellationToken: ct);
         }
         else
         {
             await _bot.SendMessage(chatId,
-                "⚠️ Запрос уже существует.",
-                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(),
+                LocalizationService.Get(lang, "request_exists"),
+                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
                 cancellationToken: ct);
         }
     }
 
-    private async Task HandleAcceptFriendAsync(long chatId, int messageId, int userId, string data,
+    private async Task HandleAcceptFriendAsync(long chatId, int messageId, int userId, string lang, string data,
         IFriendshipService friendshipService, CancellationToken ct)
     {
         var friendshipId = int.Parse(data.Replace(CallbackData.AcceptFriend, ""));
         var success = await friendshipService.AcceptFriendRequestAsync(friendshipId, userId);
 
         await _bot.SendMessage(chatId,
-            success ? "✅ Вы приняли запрос в друзья!" : "❌ Не удалось принять запрос.",
-            replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(),
+            success ? LocalizationService.Get(lang, "friend_accepted") : LocalizationService.Get(lang, "accept_failed"),
+            replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
             cancellationToken: ct);
     }
 
-    private async Task HandleRejectFriendAsync(long chatId, int messageId, int userId, string data,
+    private async Task HandleRejectFriendAsync(long chatId, int messageId, int userId, string lang, string data,
         IFriendshipService friendshipService, CancellationToken ct)
     {
         var friendshipId = int.Parse(data.Replace(CallbackData.RejectFriend, ""));
         await friendshipService.RejectFriendRequestAsync(friendshipId, userId);
 
         await _bot.SendMessage(chatId,
-            "❌ Запрос отклонён.",
-            replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(),
+            LocalizationService.Get(lang, "friend_rejected"),
+            replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
             cancellationToken: ct);
     }
 
-    private async Task HandleInviteFriendAsync(long chatId, int messageId, long telegramId, int userId,
+    private async Task HandleInviteFriendAsync(long chatId, int messageId, long telegramId, int userId, string lang,
         string data, IGameService gameService, IUserService userService, IQuestionService questionService,
         CancellationToken ct)
     {
@@ -928,32 +998,35 @@ public class UpdateHandler
         if (friend == null)
         {
             await _bot.SendMessage(chatId,
-                "❌ Пользователь не найден.",
-                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+                LocalizationService.Get(lang, "friend_not_found"),
+                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
                 cancellationToken: ct);
             return;
         }
 
         // Показываем выбор категории для игры с другом
-        await SendCategorySelectionAsync(chatId, questionService, true, friendId, ct);
+        await SendCategorySelectionAsync(chatId, lang, questionService, true, friendId, ct);
     }
 
-    private async Task HandleSelectCategoryAsync(long chatId, int messageId, long telegramId,
-        string data, IGameService gameService, CancellationToken ct)
+    private async Task HandleSelectCategoryAsync(long chatId, int messageId, long telegramId, string lang,
+        string data, IGameService gameService, IUserService userService, IQuestionService questionService,
+        CancellationToken ct)
     {
         // cat_0 = любая категория, cat_1 = категория с id 1
         var categoryIdStr = data.Replace(CallbackData.SelectCategory, "");
         int? categoryId = int.TryParse(categoryIdStr, out var id) && id > 0 ? id : null;
 
         await _bot.EditMessageText(chatId, messageId,
-            categoryId.HasValue ? "🔍 Ищем соперника в выбранной категории..." : "🔍 Ищем соперника...",
+            categoryId.HasValue ? LocalizationService.Get(lang, "searching_category") : LocalizationService.Get(lang, "searching_opponent"),
+            parseMode: ParseMode.Markdown,
             cancellationToken: ct);
 
-        await HandleQuickGameReplyAsync(chatId, telegramId, categoryId, gameService, ct);
+        await HandleQuickGameReplyAsync(chatId, telegramId, lang, categoryId, gameService, userService, questionService, ct);
     }
 
-    private async Task HandleSelectCategoryForFriendAsync(long chatId, int messageId, long telegramId,
-        string data, IGameService gameService, IUserService userService, CancellationToken ct)
+    private async Task HandleSelectCategoryForFriendAsync(long chatId, int messageId, long telegramId, string lang,
+        string data, IGameService gameService, IUserService userService, IQuestionService questionService,
+        CancellationToken ct)
     {
         // catf_123_0 = friend id 123, любая категория
         // catf_123_1 = friend id 123, категория с id 1
@@ -967,67 +1040,68 @@ public class UpdateHandler
         if (friend == null)
         {
             await _bot.SendMessage(chatId,
-                "❌ Пользователь не найден.",
-                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(),
+                LocalizationService.Get(lang, "friend_not_found"),
+                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
                 cancellationToken: ct);
             return;
         }
 
         var session = await gameService.CreateFriendGameAsync(telegramId, friend.TelegramId, categoryId);
 
-        var categoryInfo = session.CategoryName != null
-            ? $"\n📚 Категория: *{session.CategoryName}*"
+        // Get category name in inviter's language
+        var categoryName = await questionService.GetCategoryNameAsync(
+            session.CategoryTranslationGroupId, session.CategoryId, lang);
+        var categoryInfo = categoryName != null
+            ? LocalizationService.Get(lang, "category_info", categoryName)
             : "";
 
         await _bot.EditMessageText(chatId, messageId,
-            $"📨 Приглашение отправлено!{categoryInfo}\n\nОжидаем ответа...",
+            $"{LocalizationService.Get(lang, "invite_sent")}{categoryInfo}\n\n{LocalizationService.Get(lang, "waiting_response")}",
             parseMode: ParseMode.Markdown,
             cancellationToken: ct);
 
         await _bot.SendMessage(chatId,
-            "Нажмите «Готов» когда друг примет приглашение.",
-            replyMarkup: _keyboard.GetReadyKeyboard(),
+            LocalizationService.Get(lang, "click_ready"),
+            replyMarkup: _keyboard.GetReadyKeyboard(lang),
             cancellationToken: ct);
 
         var inviter = await userService.GetByTelegramIdAsync(telegramId);
         var inviterFlag = CountryService.GetFlag(inviter?.CountryCode);
         var inviterName = inviter != null
             ? $"{inviterFlag} {inviter.FirstName ?? ""} {inviter.LastName ?? ""}".Trim()
-            : "Друг";
+            : LocalizationService.Get(lang, "player");
 
         if (!string.IsNullOrEmpty(inviter?.Username))
             inviterName += $" (@{inviter.Username})";
 
-        var inviteCategoryInfo = session.CategoryName != null
-            ? $"\n📚 Категория: *{session.CategoryName}*"
+        var friendLang = friend.LanguageCode;
+        // Get category name in friend's language
+        var friendCategoryName = await questionService.GetCategoryNameAsync(
+            session.CategoryTranslationGroupId, session.CategoryId, friendLang);
+        var inviteCategoryInfo = friendCategoryName != null
+            ? LocalizationService.Get(friendLang, "category_info", friendCategoryName)
             : "";
 
         await _bot.SendMessage(friend.TelegramId,
-            $"🎮 *{inviterName}* приглашает вас в игру!{inviteCategoryInfo}",
+            LocalizationService.Get(friendLang, "game_invite", inviterName) + inviteCategoryInfo,
             parseMode: ParseMode.Markdown,
-            replyMarkup: _keyboard.GetReadyKeyboard(),
+            replyMarkup: _keyboard.GetReadyKeyboard(friendLang),
             cancellationToken: ct);
     }
 
-    private async Task HandleSelectCountryAsync(long chatId, int messageId, int userId, string data,
+    private async Task HandleSelectLanguageAsync(long chatId, int messageId, int userId, string data,
         IUserService userService, CancellationToken ct)
     {
-        var countryCode = data.Replace(CallbackData.SelectCountry, "");
+        var languageCode = data.Replace(CallbackData.SelectLanguage, "");
 
-        if (countryCode == "OTHER")
-        {
-            countryCode = null;
-        }
+        await userService.UpdateLanguageAsync(userId, languageCode);
 
-        await userService.UpdateCountryAsync(userId, countryCode);
-
-        var flag = CountryService.GetFlag(countryCode);
-        var countryName = CountryService.GetCountryName(countryCode);
+        var (flag, name) = LocalizationService.GetLanguageInfo(languageCode);
 
         await _bot.EditMessageText(chatId, messageId,
-            $"✅ Страна изменена!\n\n{flag} {countryName}",
+            LocalizationService.Get(languageCode, "language_changed", flag, name),
             cancellationToken: ct);
 
-        await SendProfileMenu(chatId, ct);
+        await SendProfileMenu(chatId, languageCode, ct);
     }
 }

@@ -20,10 +20,13 @@ export const updateCategory = (id: number, data: Omit<Category, 'id'>) =>
 export const deleteCategory = (id: number) =>
   api.delete(`/api/categories/${id}`);
 
+export const getCategoryTranslations = (translationGroupId: string) =>
+  api.get<Category[]>(`/api/categories/translations/${translationGroupId}`).then(res => res.data);
+
 // Questions
-export const getQuestions = (page = 1, pageSize = 20, categoryId?: number) =>
+export const getQuestions = (page = 1, pageSize = 20, categoryId?: number, languageCode?: string) =>
   api.get<PaginatedResponse<Question>>('/api/questions', {
-    params: { page, pageSize, categoryId }
+    params: { page, pageSize, categoryId, languageCode }
   }).then(res => res.data);
 
 export const createQuestion = (data: Omit<Question, 'id'>) =>
@@ -34,6 +37,9 @@ export const updateQuestion = (id: number, data: Omit<Question, 'id'>) =>
 
 export const deleteQuestion = (id: number) =>
   api.delete(`/api/questions/${id}`);
+
+export const getQuestionTranslations = (translationGroupId: string) =>
+  api.get<Question[]>(`/api/questions/translations/${translationGroupId}`).then(res => res.data);
 
 // Stats
 export const getStats = () =>

@@ -4,6 +4,8 @@ public class Question
 {
     public int Id { get; set; }
     public int CategoryId { get; set; }
+    public string LanguageCode { get; set; } = "ru"; // ISO 639-1 (ru, hi, pt, fa, de, uz)
+    public Guid? TranslationGroupId { get; set; } // Groups translations of the same question
     public string Text { get; set; } = string.Empty;
     public string CorrectAnswer { get; set; } = string.Empty;
     public string WrongAnswer1 { get; set; } = string.Empty;

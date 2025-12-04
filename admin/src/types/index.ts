@@ -3,6 +3,8 @@ export interface Category {
   name: string;
   description?: string;
   emoji?: string;
+  languageCode: string;
+  translationGroupId?: string;
   questionsCount?: number;
 }
 
@@ -10,6 +12,8 @@ export interface Question {
   id: number;
   categoryId: number;
   category?: string;
+  languageCode: string;
+  translationGroupId?: string;
   text: string;
   correctAnswer: string;
   wrongAnswer1: string;
@@ -19,6 +23,15 @@ export interface Question {
   imageUrl?: string;
   createdAt?: string;
 }
+
+export const SUPPORTED_LANGUAGES = [
+  { code: 'ru', name: 'Русский', flag: '🇷🇺' },
+  { code: 'hi', name: 'हिन्दी', flag: '🇮🇳' },
+  { code: 'pt', name: 'Português', flag: '🇧🇷' },
+  { code: 'fa', name: 'فارسی', flag: '🇮🇷' },
+  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+  { code: 'uz', name: "O'zbek", flag: '🇺🇿' },
+] as const;
 
 export interface Stats {
   totalUsers: number;

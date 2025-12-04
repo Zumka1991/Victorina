@@ -11,6 +11,7 @@ public interface IUserService
     Task<User?> FindByPhoneAsync(string phone);
     Task UpdatePhoneAsync(int userId, string phone);
     Task UpdateCountryAsync(int userId, string? countryCode);
+    Task UpdateLanguageAsync(int userId, string languageCode);
     Task UpdateLastActiveAsync(int userId);
     Task<IList<User>> SearchUsersAsync(string query, int excludeUserId);
 }

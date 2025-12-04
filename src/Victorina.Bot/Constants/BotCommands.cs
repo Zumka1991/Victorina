@@ -35,7 +35,7 @@ public static class CallbackData
     public const string CheckOpponent = "check_opponent";
 
     // Профиль
-    public const string SelectCountry = "country_";
+    public const string SelectLanguage = "lang_";
     public const string BackToProfile = "back_profile";
 
     // Категории
