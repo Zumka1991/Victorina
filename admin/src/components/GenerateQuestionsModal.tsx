@@ -37,13 +37,13 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
 
       const promises = questions.map(q => {
         // Find the category for this language that matches the selected category's translation group
-        let categoryId = null;
+        let categoryId = selectedCategoryId!;
         if (selectedCategory?.translationGroupId) {
           const translatedCategory = categories.find(c =>
             c.languageCode === q.languageCode &&
             c.translationGroupId === selectedCategory.translationGroupId
           );
-          categoryId = translatedCategory?.id || null;
+          categoryId = translatedCategory?.id || selectedCategoryId!;
         }
 
         return createQuestion({
