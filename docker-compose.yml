@@ -5,9 +5,9 @@ services:
     image: postgres:16-alpine
     container_name: victorina-db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: victorina
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-victorina}
     ports:
       - "5433:5432"
     volumes:
@@ -24,7 +24,7 @@ services:
     image: traxex864/victorina-api:latest
     container_name: victorina-api
     environment:
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=victorina;Username=postgres;Password=postgres
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=${POSTGRES_DB:-victorina};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
       - ASPNETCORE_URLS=http://+:80
     ports:
       - "5001:80"
@@ -38,7 +38,7 @@ services:
     image: traxex864/victorina-bot:latest
     container_name: victorina-bot
     environment:
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=victorina;Username=postgres;Password=postgres
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=${POSTGRES_DB:-victorina};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
       - Bot__BotToken=${BOT_TOKEN}
       - Api__BaseUrl=http://api:80
     depends_on:
@@ -52,7 +52,7 @@ services:
     image: traxex864/victorina-admin:latest
     container_name: victorina-admin
     environment:
-      - API_URL=http://localhost:5001
+      - API_URL=${API_URL:-http://localhost:5001}
     ports:
       - "3002:80"
     depends_on:
