@@ -52,7 +52,7 @@ services:
     image: traxex864/victorina-admin:latest
     container_name: victorina-admin
     environment:
-      - VITE_API_URL=http://localhost:5001
+      - API_URL=http://localhost:5001
     ports:
       - "3002:80"
     depends_on:

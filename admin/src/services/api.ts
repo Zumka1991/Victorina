@@ -1,7 +1,10 @@
 import axios from 'axios';
 import type { Category, Question, Stats, GameSetting, PaginatedResponse, LeaderboardPlayer } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5175';
+// Use runtime config if available, otherwise fall back to build-time env var
+const API_URL = (window as any).APP_CONFIG?.API_URL !== '__API_URL__'
+  ? (window as any).APP_CONFIG?.API_URL
+  : (import.meta.env.VITE_API_URL || 'http://localhost:5175');
 
 const api = axios.create({
   baseURL: API_URL,
