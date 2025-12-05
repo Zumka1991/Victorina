@@ -5,8 +5,15 @@ export interface Category {
   emoji?: string;
   languageCode: string;
   translationGroupId?: string;
+  categoryGroup?: string;
   questionsCount?: number;
 }
+
+export const CATEGORY_GROUPS = [
+  { value: 'general', label: 'Общие' },
+  { value: 'special', label: 'Специальные' },
+  { value: 'popular', label: 'Популярные' },
+] as const;
 
 export interface Question {
   id: number;

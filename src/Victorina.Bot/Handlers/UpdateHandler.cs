@@ -107,7 +107,7 @@ public class UpdateHandler
         }
         else if (IsQuickGameButton(text))
         {
-            await SendCategorySelectionAsync(chatId, lang, questionService, false, null, ct);
+            await SendCategoryGroupSelectionAsync(chatId, lang, false, null, ct);
         }
         else if (IsPlayWithFriendButton(text))
         {
@@ -268,6 +268,15 @@ public class UpdateHandler
             LocalizationService.Get(lang, "friends_menu"),
             parseMode: ParseMode.Markdown,
             replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
+            cancellationToken: ct);
+    }
+
+    private async Task SendCategoryGroupSelectionAsync(long chatId, string lang, bool forFriend, int? friendId, CancellationToken ct)
+    {
+        await _bot.SendMessage(chatId,
+            LocalizationService.Get(lang, "category_groups"),
+            parseMode: ParseMode.Markdown,
+            replyMarkup: _keyboard.GetCategoryGroupSelectionKeyboard(lang, forFriend, friendId),
             cancellationToken: ct);
     }
 
@@ -518,7 +527,7 @@ public class UpdateHandler
             switch (data)
             {
                 case CallbackData.QuickGame:
-                    await SendCategorySelectionAsync(chatId, lang, questionService, false, null, ct);
+                    await SendCategoryGroupSelectionAsync(chatId, lang, false, null, ct);
                     break;
 
                 case CallbackData.CheckGame:
@@ -555,7 +564,15 @@ public class UpdateHandler
                     break;
 
                 default:
-                    if (data.StartsWith(CallbackData.SelectCategory))
+                    if (data.StartsWith(CallbackData.SelectCategoryGroup))
+                    {
+                        await HandleSelectCategoryGroupAsync(chatId, messageId, telegramId, lang, data, questionService, userService, ct);
+                    }
+                    else if (data.StartsWith(CallbackData.SelectCategoryGroupForFriend))
+                    {
+                        await HandleSelectCategoryGroupForFriendAsync(chatId, messageId, telegramId, lang, data, questionService, userService, ct);
+                    }
+                    else if (data.StartsWith(CallbackData.SelectCategory))
                     {
                         await HandleSelectCategoryAsync(chatId, messageId, telegramId, lang, data, gameService, userService, questionService, ct);
                     }
@@ -1004,8 +1021,88 @@ public class UpdateHandler
             return;
         }
 
-        // Показываем выбор категории для игры с другом
-        await SendCategorySelectionAsync(chatId, lang, questionService, true, friendId, ct);
+        // Показываем выбор группы категорий для игры с другом
+        await SendCategoryGroupSelectionAsync(chatId, lang, true, friendId, ct);
+    }
+
+    private async Task HandleSelectCategoryGroupAsync(long chatId, int messageId, long telegramId, string lang,
+        string data, IQuestionService questionService, IUserService userService, CancellationToken ct)
+    {
+        // grp_general, grp_special, grp_popular, grp_my, grp_all
+        var groupName = data.Replace(CallbackData.SelectCategoryGroup, "");
+
+        IList<Category> categories;
+        if (groupName == "all")
+        {
+            categories = await questionService.GetCategoriesAsync(lang);
+        }
+        else if (groupName == "my")
+        {
+            categories = await questionService.GetUserCategoriesAsync(telegramId, lang);
+        }
+        else
+        {
+            categories = await questionService.GetCategoriesByGroupAsync(groupName, lang);
+        }
+
+        if (categories.Count == 0)
+        {
+            await _bot.EditMessageText(chatId, messageId,
+                LocalizationService.Get(lang, "no_categories_found"),
+                parseMode: ParseMode.Markdown,
+                replyMarkup: _keyboard.GetCategoryGroupSelectionKeyboard(lang, false, null),
+                cancellationToken: ct);
+        }
+        else
+        {
+            await _bot.EditMessageText(chatId, messageId,
+                LocalizationService.Get(lang, "select_category"),
+                parseMode: ParseMode.Markdown,
+                replyMarkup: _keyboard.GetCategorySelectionKeyboard(categories, lang, false, null),
+                cancellationToken: ct);
+        }
+    }
+
+    private async Task HandleSelectCategoryGroupForFriendAsync(long chatId, int messageId, long telegramId, string lang,
+        string data, IQuestionService questionService, IUserService userService, CancellationToken ct)
+    {
+        // grpf_123_general, grpf_123_special, grpf_123_popular, grpf_123_my, grpf_123_all
+        var parts = data.Replace(CallbackData.SelectCategoryGroupForFriend, "").Split('_');
+        if (parts.Length < 2) return;
+
+        var friendId = int.Parse(parts[0]);
+        var groupName = parts[1];
+
+        IList<Category> categories;
+        if (groupName == "all")
+        {
+            categories = await questionService.GetCategoriesAsync(lang);
+        }
+        else if (groupName == "my")
+        {
+            categories = await questionService.GetUserCategoriesAsync(telegramId, lang);
+        }
+        else
+        {
+            categories = await questionService.GetCategoriesByGroupAsync(groupName, lang);
+        }
+
+        if (categories.Count == 0)
+        {
+            await _bot.EditMessageText(chatId, messageId,
+                LocalizationService.Get(lang, "no_categories_found"),
+                parseMode: ParseMode.Markdown,
+                replyMarkup: _keyboard.GetCategoryGroupSelectionKeyboard(lang, true, friendId),
+                cancellationToken: ct);
+        }
+        else
+        {
+            await _bot.EditMessageText(chatId, messageId,
+                LocalizationService.Get(lang, "select_category_friend"),
+                parseMode: ParseMode.Markdown,
+                replyMarkup: _keyboard.GetCategorySelectionKeyboard(categories, lang, true, friendId),
+                cancellationToken: ct);
+        }
     }
 
     private async Task HandleSelectCategoryAsync(long chatId, int messageId, long telegramId, string lang,

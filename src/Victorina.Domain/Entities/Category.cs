@@ -8,6 +8,7 @@ public class Category
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Emoji { get; set; }
+    public string CategoryGroup { get; set; } = "general"; // general, special, popular
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

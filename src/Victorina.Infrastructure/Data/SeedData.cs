@@ -29,29 +29,29 @@ public static class SeedData
         // Категории на всех языках (без явных Id - PostgreSQL генерирует автоматически)
         var categories = new List<Category>
         {
-            // География
-            new() { Name = "География", Emoji = "🌍", Description = "Вопросы о странах, городах и природе", LanguageCode = "ru", TranslationGroupId = geoGroupId },
-            new() { Name = "भूगोल", Emoji = "🌍", Description = "देशों, शहरों और प्रकृति के बारे में प्रश्न", LanguageCode = "hi", TranslationGroupId = geoGroupId },
-            new() { Name = "Geografia", Emoji = "🌍", Description = "Perguntas sobre países, cidades e natureza", LanguageCode = "pt", TranslationGroupId = geoGroupId },
-            new() { Name = "جغرافیا", Emoji = "🌍", Description = "سوالات درباره کشورها، شهرها و طبیعت", LanguageCode = "fa", TranslationGroupId = geoGroupId },
-            new() { Name = "Geographie", Emoji = "🌍", Description = "Fragen über Länder, Städte und Natur", LanguageCode = "de", TranslationGroupId = geoGroupId },
-            new() { Name = "Geografiya", Emoji = "🌍", Description = "Mamlakatlar, shaharlar va tabiat haqida savollar", LanguageCode = "uz", TranslationGroupId = geoGroupId },
+            // География (Общие)
+            new() { Name = "География", Emoji = "🌍", Description = "Вопросы о странах, городах и природе", LanguageCode = "ru", TranslationGroupId = geoGroupId, CategoryGroup = "general" },
+            new() { Name = "भूगोल", Emoji = "🌍", Description = "देशों, शहरों और प्रकृति के बारे में प्रश्न", LanguageCode = "hi", TranslationGroupId = geoGroupId, CategoryGroup = "general" },
+            new() { Name = "Geografia", Emoji = "🌍", Description = "Perguntas sobre países, cidades e natureza", LanguageCode = "pt", TranslationGroupId = geoGroupId, CategoryGroup = "general" },
+            new() { Name = "جغرافیا", Emoji = "🌍", Description = "سوالات درباره کشورها، شهرها و طبیعت", LanguageCode = "fa", TranslationGroupId = geoGroupId, CategoryGroup = "general" },
+            new() { Name = "Geographie", Emoji = "🌍", Description = "Fragen über Länder, Städte und Natur", LanguageCode = "de", TranslationGroupId = geoGroupId, CategoryGroup = "general" },
+            new() { Name = "Geografiya", Emoji = "🌍", Description = "Mamlakatlar, shaharlar va tabiat haqida savollar", LanguageCode = "uz", TranslationGroupId = geoGroupId, CategoryGroup = "general" },
 
-            // История
-            new() { Name = "История", Emoji = "📜", Description = "Исторические события и личности", LanguageCode = "ru", TranslationGroupId = historyGroupId },
-            new() { Name = "इतिहास", Emoji = "📜", Description = "ऐतिहासिक घटनाएं और व्यक्तित्व", LanguageCode = "hi", TranslationGroupId = historyGroupId },
-            new() { Name = "História", Emoji = "📜", Description = "Eventos históricos e personalidades", LanguageCode = "pt", TranslationGroupId = historyGroupId },
-            new() { Name = "تاریخ", Emoji = "📜", Description = "رویدادها و شخصیت‌های تاریخی", LanguageCode = "fa", TranslationGroupId = historyGroupId },
-            new() { Name = "Geschichte", Emoji = "📜", Description = "Historische Ereignisse und Persönlichkeiten", LanguageCode = "de", TranslationGroupId = historyGroupId },
-            new() { Name = "Tarix", Emoji = "📜", Description = "Tarixiy voqealar va shaxslar", LanguageCode = "uz", TranslationGroupId = historyGroupId },
+            // История (Популярные)
+            new() { Name = "История", Emoji = "📜", Description = "Исторические события и личности", LanguageCode = "ru", TranslationGroupId = historyGroupId, CategoryGroup = "popular" },
+            new() { Name = "इतिहास", Emoji = "📜", Description = "ऐतिहासिक घटनाएं और व्यक्तित्व", LanguageCode = "hi", TranslationGroupId = historyGroupId, CategoryGroup = "popular" },
+            new() { Name = "História", Emoji = "📜", Description = "Eventos históricos e personalidades", LanguageCode = "pt", TranslationGroupId = historyGroupId, CategoryGroup = "popular" },
+            new() { Name = "تاریخ", Emoji = "📜", Description = "رویدادها و شخصیت‌های تاریخی", LanguageCode = "fa", TranslationGroupId = historyGroupId, CategoryGroup = "popular" },
+            new() { Name = "Geschichte", Emoji = "📜", Description = "Historische Ereignisse und Persönlichkeiten", LanguageCode = "de", TranslationGroupId = historyGroupId, CategoryGroup = "popular" },
+            new() { Name = "Tarix", Emoji = "📜", Description = "Tarixiy voqealar va shaxslar", LanguageCode = "uz", TranslationGroupId = historyGroupId, CategoryGroup = "popular" },
 
-            // Наука
-            new() { Name = "Наука", Emoji = "🔬", Description = "Физика, химия, биология", LanguageCode = "ru", TranslationGroupId = scienceGroupId },
-            new() { Name = "विज्ञान", Emoji = "🔬", Description = "भौतिकी, रसायन विज्ञान, जीव विज्ञान", LanguageCode = "hi", TranslationGroupId = scienceGroupId },
-            new() { Name = "Ciência", Emoji = "🔬", Description = "Física, química, biologia", LanguageCode = "pt", TranslationGroupId = scienceGroupId },
-            new() { Name = "علم", Emoji = "🔬", Description = "فیزیک، شیمی، زیست‌شناسی", LanguageCode = "fa", TranslationGroupId = scienceGroupId },
-            new() { Name = "Wissenschaft", Emoji = "🔬", Description = "Physik, Chemie, Biologie", LanguageCode = "de", TranslationGroupId = scienceGroupId },
-            new() { Name = "Fan", Emoji = "🔬", Description = "Fizika, kimyo, biologiya", LanguageCode = "uz", TranslationGroupId = scienceGroupId },
+            // Наука (Специальные)
+            new() { Name = "Наука", Emoji = "🔬", Description = "Физика, химия, биология", LanguageCode = "ru", TranslationGroupId = scienceGroupId, CategoryGroup = "special" },
+            new() { Name = "विज्ञान", Emoji = "🔬", Description = "भौतिकी, रसायन विज्ञान, जीव विज्ञान", LanguageCode = "hi", TranslationGroupId = scienceGroupId, CategoryGroup = "special" },
+            new() { Name = "Ciência", Emoji = "🔬", Description = "Física, química, biologia", LanguageCode = "pt", TranslationGroupId = scienceGroupId, CategoryGroup = "special" },
+            new() { Name = "علم", Emoji = "🔬", Description = "فیزیک، شیمی، زیست‌شناسی", LanguageCode = "fa", TranslationGroupId = scienceGroupId, CategoryGroup = "special" },
+            new() { Name = "Wissenschaft", Emoji = "🔬", Description = "Physik, Chemie, Biologie", LanguageCode = "de", TranslationGroupId = scienceGroupId, CategoryGroup = "special" },
+            new() { Name = "Fan", Emoji = "🔬", Description = "Fizika, kimyo, biologiya", LanguageCode = "uz", TranslationGroupId = scienceGroupId, CategoryGroup = "special" },
         };
 
         await context.Categories.AddRangeAsync(categories);

@@ -41,6 +41,10 @@ public static class CallbackData
     // Категории
     public const string SelectCategory = "cat_";
     public const string SelectCategoryForFriend = "catf_";
+
+    // Category Groups
+    public const string SelectCategoryGroup = "grp_";
+    public const string SelectCategoryGroupForFriend = "grpf_";
 }
 
 public static class BotMessages

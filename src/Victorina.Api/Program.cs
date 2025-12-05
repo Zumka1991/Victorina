@@ -97,12 +97,15 @@ app.MapPost("/api/upload", async (HttpRequest request) =>
 }).WithTags("Upload").DisableAntiforgery();
 
 // Categories
-app.MapGet("/api/categories", async (VictorinaDbContext db, string? languageCode) =>
+app.MapGet("/api/categories", async (VictorinaDbContext db, string? languageCode, string? categoryGroup) =>
 {
     var query = db.Categories.Where(c => c.IsActive);
 
     if (!string.IsNullOrEmpty(languageCode))
         query = query.Where(c => c.LanguageCode == languageCode);
+
+    if (!string.IsNullOrEmpty(categoryGroup))
+        query = query.Where(c => c.CategoryGroup == categoryGroup);
 
     var categories = await query
         .OrderBy(c => c.TranslationGroupId)
@@ -116,6 +119,7 @@ app.MapGet("/api/categories", async (VictorinaDbContext db, string? languageCode
             c.Emoji,
             c.LanguageCode,
             c.TranslationGroupId,
+            c.CategoryGroup,
             QuestionsCount = c.Questions.Count(q => q.IsActive)
         })
         .ToListAsync();
@@ -134,6 +138,7 @@ app.MapPost("/api/categories", async (VictorinaDbContext db, CategoryDto dto) =>
         Emoji = dto.Emoji,
         LanguageCode = dto.LanguageCode ?? "ru",
         TranslationGroupId = translationGroupId,
+        CategoryGroup = dto.CategoryGroup ?? "general",
         IsActive = true
     };
     db.Categories.Add(category);
@@ -145,7 +150,8 @@ app.MapPost("/api/categories", async (VictorinaDbContext db, CategoryDto dto) =>
         category.Description,
         category.Emoji,
         category.LanguageCode,
-        category.TranslationGroupId
+        category.TranslationGroupId,
+        category.CategoryGroup
     });
 }).WithTags("Categories");
 
@@ -158,6 +164,7 @@ app.MapPut("/api/categories/{id}", async (VictorinaDbContext db, int id, Categor
     category.Description = dto.Description;
     category.Emoji = dto.Emoji;
     category.LanguageCode = dto.LanguageCode ?? category.LanguageCode;
+    category.CategoryGroup = dto.CategoryGroup ?? category.CategoryGroup;
     if (dto.TranslationGroupId.HasValue)
         category.TranslationGroupId = dto.TranslationGroupId;
     await db.SaveChangesAsync();
@@ -168,7 +175,8 @@ app.MapPut("/api/categories/{id}", async (VictorinaDbContext db, int id, Categor
         category.Description,
         category.Emoji,
         category.LanguageCode,
-        category.TranslationGroupId
+        category.TranslationGroupId,
+        category.CategoryGroup
     });
 }).WithTags("Categories");
 
@@ -195,10 +203,45 @@ app.MapGet("/api/categories/translations/{translationGroupId}", async (Victorina
             c.Emoji,
             c.LanguageCode,
             c.TranslationGroupId,
+            c.CategoryGroup,
             QuestionsCount = c.Questions.Count(q => q.IsActive)
         })
         .ToListAsync();
     return Results.Ok(translations);
+}).WithTags("Categories");
+
+// Get user's categories (categories they've played)
+app.MapGet("/api/categories/user/{telegramId}", async (VictorinaDbContext db, long telegramId, string? languageCode) =>
+{
+    var user = await db.Users.FirstOrDefaultAsync(u => u.TelegramId == telegramId);
+    if (user == null) return Results.Ok(new List<object>());
+
+    // Get categories from games user participated in
+    var categoriesQuery = db.Games
+        .Where(g => g.Players.Any(p => p.UserId == user.Id))
+        .Where(g => g.CategoryId.HasValue)
+        .Select(g => g.Category!)
+        .Distinct();
+
+    if (!string.IsNullOrEmpty(languageCode))
+        categoriesQuery = categoriesQuery.Where(c => c.LanguageCode == languageCode);
+
+    var categories = await categoriesQuery
+        .Where(c => c.IsActive)
+        .Select(c => new
+        {
+            c.Id,
+            c.Name,
+            c.Description,
+            c.Emoji,
+            c.LanguageCode,
+            c.TranslationGroupId,
+            c.CategoryGroup,
+            QuestionsCount = c.Questions.Count(q => q.IsActive)
+        })
+        .ToListAsync();
+
+    return Results.Ok(categories);
 }).WithTags("Categories");
 
 // Questions
@@ -473,6 +516,6 @@ app.MapControllers();
 app.Run();
 
 // DTOs
-record CategoryDto(string Name, string? Description, string? Emoji, string? LanguageCode, Guid? TranslationGroupId);
+record CategoryDto(string Name, string? Description, string? Emoji, string? LanguageCode, Guid? TranslationGroupId, string? CategoryGroup);
 record QuestionDto(int CategoryId, string Text, string CorrectAnswer, string WrongAnswer1, string WrongAnswer2, string WrongAnswer3, string? Explanation, string? ImageUrl, string? LanguageCode, Guid? TranslationGroupId);
 record SettingDto(string Value);

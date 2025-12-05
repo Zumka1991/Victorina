@@ -8,6 +8,8 @@ public interface IQuestionService
     Task<Dictionary<string, List<Question>>> GetQuestionsWithTranslationsAsync(int count, IEnumerable<string> languageCodes, int? categoryId = null);
     Task<Dictionary<string, List<Question>>> GetQuestionsForMultipleLanguagesAsync(int count, IEnumerable<string> languageCodes, int? categoryId = null);
     Task<IList<Category>> GetCategoriesAsync(string languageCode = "ru");
+    Task<IList<Category>> GetCategoriesByGroupAsync(string categoryGroup, string languageCode = "ru");
+    Task<IList<Category>> GetUserCategoriesAsync(long telegramId, string languageCode = "ru");
     Task<Category?> GetCategoryAsync(int id);
     Task<string?> GetCategoryNameAsync(Guid? translationGroupId, int? categoryId, string languageCode);
     Task<List<Question>> GetQuestionsByTranslationGroupIdsAsync(IEnumerable<Guid> translationGroupIds, string languageCode);

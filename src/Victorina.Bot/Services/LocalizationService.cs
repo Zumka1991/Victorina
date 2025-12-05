@@ -115,6 +115,15 @@ public static class LocalizationService
             // Help
             ["help"] = "🎯 *Викторина* — игра, где вы соревнуетесь с друзьями!\n\n🎮 *Как играть:*\n1. Нажмите «Играть»\n2. Выберите быструю игру или играйте с другом\n3. Отвечайте на вопросы быстрее соперника!\n\n🏆 Побеждает тот, кто даст больше правильных ответов. При равенстве — кто быстрее!",
 
+            // Category Groups
+            ["category_groups"] = "📁 *Разделы категорий:*",
+            ["group_general"] = "📚 Общие",
+            ["group_special"] = "⭐ Специальные",
+            ["group_popular"] = "🔥 Популярные",
+            ["group_my"] = "👤 Мои категории",
+            ["group_all"] = "🎲 Все категории",
+            ["no_categories_found"] = "😔 В этом разделе пока нет категорий.",
+
             // Misc
             ["player"] = "Игрок",
         },
@@ -228,6 +237,15 @@ public static class LocalizationService
 
             // Help
             ["help"] = "🎯 *क्विज़* — एक गेम जहाँ आप दोस्तों के साथ प्रतिस्पर्धा करते हैं!\n\n🎮 *कैसे खेलें:*\n1. «खेलें» क्लिक करें\n2. क्विक गेम चुनें या दोस्त के साथ खेलें\n3. प्रतिद्वंद्वी से तेज़ जवाब दें!\n\n🏆 सबसे अधिक सही उत्तर देने वाला जीतता है। बराबरी पर - सबसे तेज़!",
+
+            // Category Groups
+            ["category_groups"] = "📁 *श्रेणी अनुभाग:*",
+            ["group_general"] = "📚 सामान्य",
+            ["group_special"] = "⭐ विशेष",
+            ["group_popular"] = "🔥 लोकप्रिय",
+            ["group_my"] = "👤 मेरी श्रेणियाँ",
+            ["group_all"] = "🎲 सभी श्रेणियाँ",
+            ["no_categories_found"] = "😔 इस अनुभाग में अभी कोई श्रेणी नहीं है।",
 
             // Misc
             ["player"] = "खिलाड़ी",
@@ -343,6 +361,15 @@ public static class LocalizationService
             // Help
             ["help"] = "🎯 *Quiz* — um jogo onde você compete com amigos!\n\n🎮 *Como jogar:*\n1. Clique em «Jogar»\n2. Escolha jogo rápido ou jogue com um amigo\n3. Responda às perguntas mais rápido que seu oponente!\n\n🏆 Quem der mais respostas corretas vence. Em caso de empate — o mais rápido!",
 
+            // Category Groups
+            ["category_groups"] = "📁 *Seções de categorias:*",
+            ["group_general"] = "📚 Gerais",
+            ["group_special"] = "⭐ Especiais",
+            ["group_popular"] = "🔥 Populares",
+            ["group_my"] = "👤 Minhas categorias",
+            ["group_all"] = "🎲 Todas as categorias",
+            ["no_categories_found"] = "😔 Ainda não há categorias nesta seção.",
+
             // Misc
             ["player"] = "Jogador",
         },
@@ -456,6 +483,15 @@ public static class LocalizationService
 
             // Help
             ["help"] = "🎯 *مسابقه* — بازی که با دوستان رقابت می‌کنید!\n\n🎮 *نحوه بازی:*\n1. روی «بازی» کلیک کنید\n2. بازی سریع یا بازی با دوست را انتخاب کنید\n3. سریع‌تر از حریف پاسخ دهید!\n\n🏆 کسی که بیشترین پاسخ صحیح را بدهد برنده است. در صورت تساوی — سریع‌ترین!",
+
+            // Category Groups
+            ["category_groups"] = "📁 *بخش‌های دسته‌بندی:*",
+            ["group_general"] = "📚 عمومی",
+            ["group_special"] = "⭐ ویژه",
+            ["group_popular"] = "🔥 محبوب",
+            ["group_my"] = "👤 دسته‌های من",
+            ["group_all"] = "🎲 همه دسته‌ها",
+            ["no_categories_found"] = "😔 هنوز دسته‌ای در این بخش وجود ندارد.",
 
             // Misc
             ["player"] = "بازیکن",
@@ -571,6 +607,15 @@ public static class LocalizationService
             // Help
             ["help"] = "🎯 *Quiz* — ein Spiel, in dem du gegen Freunde antrittst!\n\n🎮 *So spielst du:*\n1. Klicke auf «Spielen»\n2. Wähle schnelles Spiel oder spiele mit einem Freund\n3. Antworte schneller als dein Gegner!\n\n🏆 Wer die meisten richtigen Antworten gibt, gewinnt. Bei Gleichstand — der Schnellere!",
 
+            // Category Groups
+            ["category_groups"] = "📁 *Kategoriebereiche:*",
+            ["group_general"] = "📚 Allgemein",
+            ["group_special"] = "⭐ Speziell",
+            ["group_popular"] = "🔥 Beliebt",
+            ["group_my"] = "👤 Meine Kategorien",
+            ["group_all"] = "🎲 Alle Kategorien",
+            ["no_categories_found"] = "😔 In diesem Bereich gibt es noch keine Kategorien.",
+
             // Misc
             ["player"] = "Spieler",
         },
@@ -684,6 +729,15 @@ public static class LocalizationService
 
             // Help
             ["help"] = "🎯 *Viktorina* — do'stlar bilan raqobatlashadigan o'yin!\n\n🎮 *Qanday o'ynash:*\n1. «O'ynash» tugmasini bosing\n2. Tez o'yin yoki do'st bilan o'ynashni tanlang\n3. Raqibdan tezroq javob bering!\n\n🏆 Eng ko'p to'g'ri javob bergan g'olib. Tenglik bo'lsa — eng tez!",
+
+            // Category Groups
+            ["category_groups"] = "📁 *Kategoriya bo'limlari:*",
+            ["group_general"] = "📚 Umumiy",
+            ["group_special"] = "⭐ Maxsus",
+            ["group_popular"] = "🔥 Mashhur",
+            ["group_my"] = "👤 Mening kategoriyalarim",
+            ["group_all"] = "🎲 Barcha kategoriyalar",
+            ["no_categories_found"] = "😔 Bu bo'limda hali kategoriyalar yo'q.",
 
             // Misc
             ["player"] = "O'yinchi",

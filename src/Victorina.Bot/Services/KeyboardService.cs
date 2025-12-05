@@ -227,6 +227,41 @@ public class KeyboardService
         });
     }
 
+    public InlineKeyboardMarkup GetCategoryGroupSelectionKeyboard(string lang, bool forFriend = false, int? friendId = null)
+    {
+        var prefix = forFriend ? $"{CallbackData.SelectCategoryGroupForFriend}{friendId}_" : CallbackData.SelectCategoryGroup;
+
+        var buttons = new List<InlineKeyboardButton[]>
+        {
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "group_general"), $"{prefix}general")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "group_special"), $"{prefix}special")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "group_popular"), $"{prefix}popular")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "group_my"), $"{prefix}my")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "group_all"), $"{prefix}all")
+            },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_back"), CallbackData.BackToMenu)
+            }
+        };
+
+        return new InlineKeyboardMarkup(buttons);
+    }
+
     public InlineKeyboardMarkup GetCategorySelectionKeyboard(IList<Category> categories, string lang, bool forFriend = false, int? friendId = null)
     {
         var prefix = forFriend ? $"{CallbackData.SelectCategoryForFriend}{friendId}_" : CallbackData.SelectCategory;

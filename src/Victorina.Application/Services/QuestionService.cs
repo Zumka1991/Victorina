@@ -147,6 +147,37 @@ public class QuestionService : IQuestionService
             .ToListAsync();
     }
 
+    public async Task<IList<Category>> GetCategoriesByGroupAsync(string categoryGroup, string languageCode = "ru")
+    {
+        return await _context.Categories
+            .Where(c => c.IsActive && c.LanguageCode == languageCode && c.CategoryGroup == categoryGroup)
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+    }
+
+    public async Task<IList<Category>> GetUserCategoriesAsync(long telegramId, string languageCode = "ru")
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.TelegramId == telegramId);
+        if (user == null)
+            return new List<Category>();
+
+        var categoriesQuery = _context.Games
+            .Where(g => g.Players.Any(p => p.UserId == user.Id))
+            .Where(g => g.CategoryId.HasValue)
+            .Select(g => g.Category!)
+            .Distinct();
+
+        // Get categories in user's language
+        var categoryIds = await categoriesQuery.Select(c => c.Id).ToListAsync();
+
+        return await _context.Categories
+            .Where(c => c.IsActive && c.LanguageCode == languageCode)
+            .Where(c => c.TranslationGroupId != null &&
+                        _context.Categories.Any(cat => categoryIds.Contains(cat.Id) && cat.TranslationGroupId == c.TranslationGroupId))
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+    }
+
     public async Task<Category?> GetCategoryAsync(int id)
     {
         return await _context.Categories.FindAsync(id);

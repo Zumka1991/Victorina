@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCategories, createCategory, updateCategory, deleteCategory, getCategoryTranslations } from '../services/api';
 import type { Category } from '../types';
-import { SUPPORTED_LANGUAGES } from '../types';
+import { SUPPORTED_LANGUAGES, CATEGORY_GROUPS } from '../types';
 
 export default function Categories() {
   const queryClient = useQueryClient();
@@ -15,7 +15,8 @@ export default function Categories() {
     description: '',
     emoji: '',
     languageCode: 'ru',
-    translationGroupId: undefined as string | undefined
+    translationGroupId: undefined as string | undefined,
+    categoryGroup: 'general'
   });
 
   const { data: categories, isLoading } = useQuery({
@@ -57,6 +58,7 @@ export default function Categories() {
         emoji: category.emoji || '',
         languageCode: category.languageCode || 'ru',
         translationGroupId: category.translationGroupId,
+        categoryGroup: category.categoryGroup || 'general',
       });
       // Load all translations for this category
       if (category.translationGroupId) {
@@ -78,7 +80,8 @@ export default function Categories() {
         description: '',
         emoji: '',
         languageCode: 'ru',
-        translationGroupId: undefined
+        translationGroupId: undefined,
+        categoryGroup: 'general'
       });
     }
     setIsModalOpen(true);
@@ -95,6 +98,7 @@ export default function Categories() {
       emoji: category.emoji || '', // Keep same emoji for linked categories
       languageCode: targetLang,
       translationGroupId: category.translationGroupId,
+      categoryGroup: category.categoryGroup || 'general',
     });
     setIsModalOpen(true);
   };
@@ -385,6 +389,7 @@ export default function Categories() {
                           emoji: existingTranslation.emoji || '',
                           languageCode: newLang,
                           translationGroupId: existingTranslation.translationGroupId,
+                          categoryGroup: existingTranslation.categoryGroup || 'general',
                         });
                       } else {
                         // No translation exists - clear fields for new translation
@@ -436,6 +441,19 @@ export default function Categories() {
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder={translatingFrom ? "Введите перевод описания..." : "Вопросы о странах и городах"}
                 />
+              </div>
+              <div className="form-group">
+                <label>Группа</label>
+                <select
+                  value={form.categoryGroup}
+                  onChange={(e) => setForm({ ...form, categoryGroup: e.target.value })}
+                >
+                  {CATEGORY_GROUPS.map((group) => (
+                    <option key={group.value} value={group.value}>
+                      {group.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={closeModal}>
