@@ -30,9 +30,9 @@ docker-compose up -d
 ```
 
 5. Access the services:
-- **Admin Panel**: http://localhost:3000
-- **API**: http://localhost:5000
-- **PostgreSQL**: localhost:5432
+- **Admin Panel**: http://localhost:3002
+- **API**: http://localhost:5001
+- **PostgreSQL**: localhost:5433
 
 ### Stopping the Services
 
