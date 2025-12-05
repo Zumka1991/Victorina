@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.3'
 
 services:
   postgres:
@@ -29,8 +29,7 @@ services:
     ports:
       - "5000:80"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     restart: unless-stopped
     networks:
       - victorina-network
@@ -43,10 +42,8 @@ services:
       - Bot__BotToken=${BOT_TOKEN}
       - Api__BaseUrl=http://api:80
     depends_on:
-      postgres:
-        condition: service_healthy
-      api:
-        condition: service_started
+      - postgres
+      - api
     restart: unless-stopped
     networks:
       - victorina-network
