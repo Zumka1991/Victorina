@@ -129,7 +129,7 @@ export default function Categories() {
 
   // Get existing translations for a category
   const getExistingTranslations = (category: Category): string[] => {
-    if (!category.translationGroupId || !categories) return [category.languageCode];
+    if (!category.translationGroupId || !categories || !Array.isArray(categories)) return [category.languageCode];
 
     const translations = categories
       .filter(c => c.translationGroupId === category.translationGroupId)
@@ -146,7 +146,7 @@ export default function Categories() {
 
   // Group categories by TranslationGroupId for display
   const groupedCategories = () => {
-    if (!categories) return [];
+    if (!categories || !Array.isArray(categories)) return [];
 
     const groups = new Map<string | undefined, Category[]>();
     const ungrouped: Category[] = [];

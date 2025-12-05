@@ -10,9 +10,21 @@ const api = axios.create({
   baseURL: API_URL,
 });
 
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('API Error:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
+
 // Categories
 export const getCategories = () =>
-  api.get<Category[]>('/api/categories').then(res => res.data);
+  api.get<Category[]>('/api/categories').then(res => {
+    console.log('Categories response:', res.data);
+    return Array.isArray(res.data) ? res.data : [];
+  });
 
 export const createCategory = (data: Omit<Category, 'id'>) =>
   api.post<Category>('/api/categories', data).then(res => res.data);
