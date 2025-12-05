@@ -1,7 +1,7 @@
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS base
 WORKDIR /app
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
 WORKDIR /src
 COPY ["src/Victorina.Bot/Victorina.Bot.csproj", "src/Victorina.Bot/"]
 COPY ["src/Victorina.Application/Victorina.Application.csproj", "src/Victorina.Application/"]
