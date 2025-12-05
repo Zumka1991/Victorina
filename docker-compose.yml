@@ -52,7 +52,7 @@ services:
     image: traxex864/victorina-admin:latest
     container_name: victorina-admin
     environment:
-      - API_URL=${API_URL:-http://localhost:5001}
+      - API_URL=${API_URL:-http://176.119.157.101:5001}
     ports:
       - "3002:80"
     depends_on:
