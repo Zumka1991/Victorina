@@ -1,24 +1,14 @@
 import axios from 'axios';
 import type { Category, Question, Stats, GameSetting, PaginatedResponse, LeaderboardPlayer } from '../types';
 
-// Use runtime config if available, otherwise fall back to build-time env var
-// Empty string means use relative path (same host via nginx proxy)
-const runtimeUrl = (window as any).APP_CONFIG?.API_URL;
-let API_URL = '';
+// Always use relative path - nginx will proxy /api/ to backend
+// This way we don't need to configure API URL at all
+const API_URL = '';
 
-if (runtimeUrl !== undefined && runtimeUrl !== '__API_URL__') {
-  // Runtime config is set
-  API_URL = runtimeUrl;
-} else {
-  // Fall back to build-time env var
-  API_URL = import.meta.env.VITE_API_URL || '';
-}
-
-console.log('Runtime URL:', runtimeUrl);
-console.log('API_URL configured as:', API_URL || '(empty = relative path via nginx proxy)');
+console.log('API_URL: Using relative path via nginx proxy');
 
 const api = axios.create({
-  baseURL: API_URL || undefined,
+  baseURL: API_URL,
 });
 
 // Add response interceptor for better error handling
