@@ -54,7 +54,7 @@ services:
     environment:
       - VITE_API_URL=http://localhost:5001
     ports:
-      - "3001:80"
+      - "3002:80"
     depends_on:
       - api
     restart: unless-stopped
