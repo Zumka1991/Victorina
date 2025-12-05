@@ -19,6 +19,7 @@ builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddApplication();
 
 // API
+builder.Services.AddControllers(); // Add controller support
 builder.Services.AddOpenApi();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -201,7 +202,7 @@ app.MapGet("/api/categories/translations/{translationGroupId}", async (Victorina
 }).WithTags("Categories");
 
 // Questions
-app.MapGet("/api/questions", async (VictorinaDbContext db, int? categoryId, string? languageCode, int page = 1, int pageSize = 20) =>
+app.MapGet("/api/questions", async (VictorinaDbContext db, int? categoryId, string? languageCode, string? search, int page = 1, int pageSize = 20) =>
 {
     var query = db.Questions
         .Include(q => q.Category)
@@ -212,6 +213,13 @@ app.MapGet("/api/questions", async (VictorinaDbContext db, int? categoryId, stri
 
     if (!string.IsNullOrEmpty(languageCode))
         query = query.Where(q => q.LanguageCode == languageCode);
+
+    if (!string.IsNullOrEmpty(search))
+        query = query.Where(q => q.Text.Contains(search) ||
+                                 q.CorrectAnswer.Contains(search) ||
+                                 q.WrongAnswer1.Contains(search) ||
+                                 q.WrongAnswer2.Contains(search) ||
+                                 q.WrongAnswer3.Contains(search));
 
     var total = await query.CountAsync();
     var questions = await query
@@ -458,6 +466,9 @@ app.MapPost("/api/seed/reset", async (VictorinaDbContext db) =>
     await SeedData.ClearAndReseedAsync(db);
     return Results.Ok(new { Message = "Данные пересозданы!", CategoriesCount = await db.Categories.CountAsync(), QuestionsCount = await db.Questions.CountAsync() });
 }).WithTags("Seed");
+
+// Map controllers
+app.MapControllers();
 
 app.Run();
 

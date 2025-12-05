@@ -1,19 +1,23 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getQuestions, getCategories, createQuestion, updateQuestion, deleteQuestion, uploadImage, getFullImageUrl, getQuestionTranslations } from '../services/api';
 import type { Question } from '../types';
 import { SUPPORTED_LANGUAGES } from '../types';
+import GenerateQuestionsModal from '../components/GenerateQuestionsModal';
 
 export default function Questions() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [categoryFilter, setCategoryFilter] = useState<number | undefined>();
   const [languageFilter, setLanguageFilter] = useState<string | undefined>();
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [translatingFrom, setTranslatingFrom] = useState<Question | null>(null); // Question we're adding translation for
   const [translationGroup, setTranslationGroup] = useState<Question[]>([]); // All translations for current question
   const [isUploading, setIsUploading] = useState(false);
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     categoryId: 0,
@@ -28,9 +32,20 @@ export default function Questions() {
     imageUrl: '',
   });
 
+  // Debounce search query to avoid excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1); // Reset to first page when search changes
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const { data: questionsData, isLoading } = useQuery({
-    queryKey: ['questions', page, categoryFilter, languageFilter],
-    queryFn: () => getQuestions(page, 20, categoryFilter, languageFilter),
+    queryKey: ['questions', page, categoryFilter, languageFilter, debouncedSearch],
+    queryFn: () => getQuestions(page, 20, categoryFilter, languageFilter, debouncedSearch || undefined),
+    placeholderData: (previousData) => previousData,
   });
 
   const { data: categories } = useQuery({
@@ -228,12 +243,32 @@ export default function Questions() {
     <div>
       <div className="page-header">
         <h2>Вопросы</h2>
-        <button className="btn btn-primary" onClick={() => openModal()}>
-          + Добавить вопрос
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="btn btn-secondary" onClick={() => {
+            console.log('Generate AI button clicked');
+            setIsGenerateModalOpen(true);
+          }}>
+            🤖 Generate with AI
+          </button>
+          <button className="btn btn-primary" onClick={() => openModal()}>
+            + Добавить вопрос
+          </button>
+        </div>
       </div>
 
       <div className="filter-bar">
+        <input
+          type="text"
+          placeholder="🔍 Поиск по вопросам..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            padding: '8px 15px',
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            minWidth: '250px',
+          }}
+        />
         <label>Язык:</label>
         <select
           value={languageFilter || ''}
@@ -708,6 +743,12 @@ export default function Questions() {
           </div>
         </div>
       )}
+
+      <GenerateQuestionsModal
+        isOpen={isGenerateModalOpen}
+        onClose={() => setIsGenerateModalOpen(false)}
+        categories={categories || []}
+      />
     </div>
   );
 }

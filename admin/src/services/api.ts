@@ -24,9 +24,9 @@ export const getCategoryTranslations = (translationGroupId: string) =>
   api.get<Category[]>(`/api/categories/translations/${translationGroupId}`).then(res => res.data);
 
 // Questions
-export const getQuestions = (page = 1, pageSize = 20, categoryId?: number, languageCode?: string) =>
+export const getQuestions = (page = 1, pageSize = 20, categoryId?: number, languageCode?: string, search?: string) =>
   api.get<PaginatedResponse<Question>>('/api/questions', {
-    params: { page, pageSize, categoryId, languageCode }
+    params: { page, pageSize, categoryId, languageCode, search }
   }).then(res => res.data);
 
 export const createQuestion = (data: Omit<Question, 'id'>) =>
@@ -40,6 +40,26 @@ export const deleteQuestion = (id: number) =>
 
 export const getQuestionTranslations = (translationGroupId: string) =>
   api.get<Question[]>(`/api/questions/translations/${translationGroupId}`).then(res => res.data);
+
+// AI Generation
+export interface GeneratedQuestion {
+  translationGroupId: string;
+  languageCode: string;
+  text: string;
+  correctAnswer: string;
+  wrongAnswer1: string;
+  wrongAnswer2: string;
+  wrongAnswer3: string;
+  explanation?: string;
+  difficulty: string;
+}
+
+export const generateQuestions = (count: number, languages: string[], categoryName?: string) =>
+  api.post<GeneratedQuestion[]>('/api/ai/generate-questions', {
+    count,
+    languages,
+    categoryName
+  }).then(res => res.data);
 
 // Stats
 export const getStats = () =>
