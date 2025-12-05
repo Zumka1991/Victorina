@@ -56,7 +56,6 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
           categoryId: categoryId,
           languageCode: q.languageCode,
           translationGroupId: q.translationGroupId,
-          isActive: true,
           imageUrl: undefined,
         });
       });
