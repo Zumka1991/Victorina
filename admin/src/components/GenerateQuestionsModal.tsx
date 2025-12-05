@@ -52,12 +52,12 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
           wrongAnswer1: q.wrongAnswer1,
           wrongAnswer2: q.wrongAnswer2,
           wrongAnswer3: q.wrongAnswer3,
-          explanation: q.explanation || null,
+          explanation: q.explanation || undefined,
           categoryId: categoryId,
           languageCode: q.languageCode,
           translationGroupId: q.translationGroupId,
           isActive: true,
-          imageUrl: null,
+          imageUrl: undefined,
         });
       });
       return Promise.all(promises);

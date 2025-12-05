@@ -113,7 +113,8 @@ export default function Categories() {
       description: '',
       emoji: '',
       languageCode: 'ru',
-      translationGroupId: undefined
+      translationGroupId: undefined,
+      categoryGroup: 'general'
     });
   };
 
