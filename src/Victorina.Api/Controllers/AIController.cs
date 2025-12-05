@@ -182,7 +182,7 @@ Each question should have:
 - A question text (clear, concise, and engaging)
 - 4 answer options (one correct, three incorrect)
 - An explanation of the correct answer
-- A difficulty level: ""{difficultyLevel}"""
+- A difficulty level: ""{difficultyLevel}""
 
 Critical requirements:
 - Questions with the same meaning across ALL languages MUST have the SAME translationGroupId (generate a new UUID for each unique question)
