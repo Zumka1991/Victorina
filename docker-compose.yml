@@ -27,7 +27,7 @@ services:
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=victorina;Username=postgres;Password=postgres
       - ASPNETCORE_URLS=http://+:80
     ports:
-      - "5000:80"
+      - "5001:80"
     depends_on:
       - postgres
     restart: unless-stopped
@@ -52,9 +52,9 @@ services:
     image: traxex864/victorina-admin:latest
     container_name: victorina-admin
     environment:
-      - VITE_API_URL=http://localhost:5000
+      - VITE_API_URL=http://localhost:5001
     ports:
-      - "3000:80"
+      - "3001:80"
     depends_on:
       - api
     restart: unless-stopped
