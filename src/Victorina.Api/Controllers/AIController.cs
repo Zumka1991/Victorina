@@ -145,7 +145,36 @@ public class AIController : ControllerBase
         var categoryInfo = request.CategoryName != null ? $" about '{request.CategoryName}'" : "";
         var randomSeed = Guid.NewGuid().ToString("N").Substring(0, 8); // Add randomness
 
+        var difficultyInfo = request.Difficulty switch
+        {
+            "easy" => @"
+DIFFICULTY: EASY
+- Questions should be about well-known facts and basic knowledge
+- Suitable for beginners and general audiences
+- Answers should be straightforward
+- Avoid obscure or specialized knowledge",
+            "medium" => @"
+DIFFICULTY: MEDIUM
+- Questions should require some thinking or general knowledge
+- Suitable for average quiz players
+- May include some less common facts
+- Balance between accessible and challenging",
+            "hard" => @"
+DIFFICULTY: HARD
+- Questions should be challenging and require deeper knowledge
+- May include specialized or obscure facts
+- Suitable for experienced players
+- Test detailed understanding of topics",
+            _ => @"
+DIFFICULTY: MIXED (easy/medium/hard)
+- Generate a mix of easy, medium, and hard questions
+- Vary the difficulty across the question set"
+        };
+
+        var difficultyLevel = request.Difficulty ?? "medium";
+
         return $@"Generate {request.Count} UNIQUE and CREATIVE quiz questions{categoryInfo} in the following languages: {languagesStr}.
+{difficultyInfo}
 
 IMPORTANT: Make the questions diverse and interesting. Avoid common or obvious questions. Use seed: {randomSeed} for inspiration.
 
@@ -153,7 +182,7 @@ Each question should have:
 - A question text (clear, concise, and engaging)
 - 4 answer options (one correct, three incorrect)
 - An explanation of the correct answer
-- A difficulty level (easy/medium/hard)
+- A difficulty level: ""{difficultyLevel}"""
 
 Critical requirements:
 - Questions with the same meaning across ALL languages MUST have the SAME translationGroupId (generate a new UUID for each unique question)
@@ -201,7 +230,8 @@ Return ONLY a valid JSON array with this exact structure (no markdown, no additi
 public record GenerateQuestionsRequest(
     int Count,
     string[] Languages,
-    string? CategoryName
+    string? CategoryName,
+    string? Difficulty // "easy", "medium", "hard", or null for mixed
 );
 
 public record GeneratedQuestion(

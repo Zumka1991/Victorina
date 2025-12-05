@@ -70,11 +70,12 @@ export interface GeneratedQuestion {
   difficulty: string;
 }
 
-export const generateQuestions = (count: number, languages: string[], categoryName?: string) =>
+export const generateQuestions = (count: number, languages: string[], categoryName?: string, difficulty?: string) =>
   api.post<GeneratedQuestion[]>('/api/ai/generate-questions', {
     count,
     languages,
-    categoryName
+    categoryName,
+    difficulty
   }).then(res => res.data);
 
 // Stats

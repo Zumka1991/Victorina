@@ -22,6 +22,7 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
   const [count, setCount] = useState(3);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>(['ru', 'de']);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [difficulty, setDifficulty] = useState<string>('medium');
   const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[] | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,8 +83,8 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
         ? categories.find(c => c.id === selectedCategoryId)?.name
         : undefined;
 
-      console.log('Generating questions:', { count, selectedLanguages, categoryName });
-      const questions = await generateQuestions(count, selectedLanguages, categoryName);
+      console.log('Generating questions:', { count, selectedLanguages, categoryName, difficulty });
+      const questions = await generateQuestions(count, selectedLanguages, categoryName, difficulty);
       console.log('Generated questions:', questions);
       setGeneratedQuestions(questions);
     } catch (err: any) {
@@ -173,6 +174,22 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                  Difficulty
+                </label>
+                <select
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value)}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                >
+                  <option value="easy">🟢 Easy - Basic knowledge</option>
+                  <option value="medium">🟡 Medium - General knowledge</option>
+                  <option value="hard">🔴 Hard - Challenging</option>
+                  <option value="">🎲 Mixed - All difficulties</option>
+                </select>
               </div>
 
               <div>
