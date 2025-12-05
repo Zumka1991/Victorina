@@ -17,24 +17,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-  bot:
-    build:
-      context: .
-      dockerfile: src/Victorina.Bot/Dockerfile
-    container_name: victorina-bot
-    environment:
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=victorina;Username=postgres;Password=postgres
-      - Bot__BotToken=${BOT_TOKEN}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
+    networks:
+      - victorina-network
 
   api:
-    build:
-      context: .
-      dockerfile: src/Victorina.Api/Dockerfile
+    image: traxex864/victorina-api:latest
     container_name: victorina-api
     environment:
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=victorina;Username=postgres;Password=postgres
@@ -45,6 +32,41 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - victorina-network
+
+  bot:
+    image: traxex864/victorina-bot:latest
+    container_name: victorina-bot
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=victorina;Username=postgres;Password=postgres
+      - Bot__BotToken=${BOT_TOKEN}
+      - Api__BaseUrl=http://api:80
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - victorina-network
+
+  admin:
+    image: traxex864/victorina-admin:latest
+    container_name: victorina-admin
+    environment:
+      - VITE_API_URL=http://localhost:5000
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - victorina-network
 
 volumes:
   postgres_data:
+
+networks:
+  victorina-network:
+    driver: bridge
