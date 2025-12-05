@@ -12,11 +12,7 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Set API URL for build (can be overridden with --build-arg)
-ARG VITE_API_URL=http://localhost:5001
-ENV VITE_API_URL=$VITE_API_URL
-
-# Build the application
+# Build the application (API URL will be set at runtime via nginx proxy)
 RUN npm run build
 
 # Production stage

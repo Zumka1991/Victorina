@@ -2,16 +2,23 @@ import axios from 'axios';
 import type { Category, Question, Stats, GameSetting, PaginatedResponse, LeaderboardPlayer } from '../types';
 
 // Use runtime config if available, otherwise fall back to build-time env var
-// Empty string means use relative path (same host)
+// Empty string means use relative path (same host via nginx proxy)
 const runtimeUrl = (window as any).APP_CONFIG?.API_URL;
-const API_URL = runtimeUrl !== '__API_URL__' && runtimeUrl !== undefined
-  ? runtimeUrl
-  : (import.meta.env.VITE_API_URL || 'http://localhost:5175');
+let API_URL = '';
 
-console.log('API_URL configured as:', API_URL || '(relative path)');
+if (runtimeUrl !== undefined && runtimeUrl !== '__API_URL__') {
+  // Runtime config is set
+  API_URL = runtimeUrl;
+} else {
+  // Fall back to build-time env var
+  API_URL = import.meta.env.VITE_API_URL || '';
+}
+
+console.log('Runtime URL:', runtimeUrl);
+console.log('API_URL configured as:', API_URL || '(empty = relative path via nginx proxy)');
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_URL || undefined,
 });
 
 // Add response interceptor for better error handling
