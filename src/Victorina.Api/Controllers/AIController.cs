@@ -55,7 +55,7 @@ public class AIController : ControllerBase
                     new { role = "system", content = "You are a helpful assistant that generates quiz questions in multiple languages. Always respond with valid JSON only, no additional text." },
                     new { role = "user", content = prompt }
                 },
-                temperature = 0.7,
+                temperature = 0.9, // Increased for more variety
                 max_tokens = 8000
             };
 
@@ -143,8 +143,11 @@ public class AIController : ControllerBase
     {
         var languagesStr = string.Join(", ", request.Languages);
         var categoryInfo = request.CategoryName != null ? $" about '{request.CategoryName}'" : "";
+        var randomSeed = Guid.NewGuid().ToString("N").Substring(0, 8); // Add randomness
 
-        return $@"Generate {request.Count} quiz questions{categoryInfo} in the following languages: {languagesStr}.
+        return $@"Generate {request.Count} UNIQUE and CREATIVE quiz questions{categoryInfo} in the following languages: {languagesStr}.
+
+IMPORTANT: Make the questions diverse and interesting. Avoid common or obvious questions. Use seed: {randomSeed} for inspiration.
 
 Each question should have:
 - A question text (clear, concise, and engaging)
@@ -156,7 +159,8 @@ Critical requirements:
 - Questions with the same meaning across ALL languages MUST have the SAME translationGroupId (generate a new UUID for each unique question)
 - Each question must appear in ALL requested languages with the same translationGroupId
 - All questions must be appropriate for a quiz game
-- Provide diverse and interesting questions
+- AVOID COMMON OR OBVIOUS QUESTIONS - be creative and think of unusual facts or interesting angles
+- Make each question UNIQUE - no repetitive themes or similar questions
 - Wrong answers must be plausible but clearly incorrect
 - Maintain cultural sensitivity across all languages
 - Ensure translations are natural and idiomatic, not literal word-for-word
