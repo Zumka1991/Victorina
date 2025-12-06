@@ -222,6 +222,10 @@ public class KeyboardService
             },
             new[]
             {
+                InlineKeyboardButton.WithCallbackData("🇬🇧 English", $"{CallbackData.SelectLanguage}en")
+            },
+            new[]
+            {
                 InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_back"), CallbackData.BackToProfile)
             }
         });
