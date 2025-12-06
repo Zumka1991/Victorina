@@ -5,8 +5,8 @@ namespace Victorina.Infrastructure.Data;
 
 public static class SeedData
 {
-    // Языки: ru, hi, pt, fa, de, uz
-    private static readonly string[] Languages = { "ru", "hi", "pt", "fa", "de", "uz" };
+    // Языки: ru, hi, pt, fa, de, uz, en
+    private static readonly string[] Languages = { "ru", "hi", "pt", "fa", "de", "uz", "en" };
 
     public static async Task SeedTestDataAsync(VictorinaDbContext context)
     {
@@ -36,6 +36,7 @@ public static class SeedData
             new() { Name = "جغرافیا", Emoji = "🌍", Description = "سوالات درباره کشورها، شهرها و طبیعت", LanguageCode = "fa", TranslationGroupId = geoGroupId, CategoryGroup = "general" },
             new() { Name = "Geographie", Emoji = "🌍", Description = "Fragen über Länder, Städte und Natur", LanguageCode = "de", TranslationGroupId = geoGroupId, CategoryGroup = "general" },
             new() { Name = "Geografiya", Emoji = "🌍", Description = "Mamlakatlar, shaharlar va tabiat haqida savollar", LanguageCode = "uz", TranslationGroupId = geoGroupId, CategoryGroup = "general" },
+            new() { Name = "Geography", Emoji = "🌍", Description = "Questions about countries, cities and nature", LanguageCode = "en", TranslationGroupId = geoGroupId, CategoryGroup = "general" },
 
             // История (Популярные)
             new() { Name = "История", Emoji = "📜", Description = "Исторические события и личности", LanguageCode = "ru", TranslationGroupId = historyGroupId, CategoryGroup = "popular" },
@@ -44,6 +45,7 @@ public static class SeedData
             new() { Name = "تاریخ", Emoji = "📜", Description = "رویدادها و شخصیت‌های تاریخی", LanguageCode = "fa", TranslationGroupId = historyGroupId, CategoryGroup = "popular" },
             new() { Name = "Geschichte", Emoji = "📜", Description = "Historische Ereignisse und Persönlichkeiten", LanguageCode = "de", TranslationGroupId = historyGroupId, CategoryGroup = "popular" },
             new() { Name = "Tarix", Emoji = "📜", Description = "Tarixiy voqealar va shaxslar", LanguageCode = "uz", TranslationGroupId = historyGroupId, CategoryGroup = "popular" },
+            new() { Name = "History", Emoji = "📜", Description = "Historical events and personalities", LanguageCode = "en", TranslationGroupId = historyGroupId, CategoryGroup = "popular" },
 
             // Наука (Специальные)
             new() { Name = "Наука", Emoji = "🔬", Description = "Физика, химия, биология", LanguageCode = "ru", TranslationGroupId = scienceGroupId, CategoryGroup = "special" },
@@ -52,6 +54,7 @@ public static class SeedData
             new() { Name = "علم", Emoji = "🔬", Description = "فیزیک، شیمی، زیست‌شناسی", LanguageCode = "fa", TranslationGroupId = scienceGroupId, CategoryGroup = "special" },
             new() { Name = "Wissenschaft", Emoji = "🔬", Description = "Physik, Chemie, Biologie", LanguageCode = "de", TranslationGroupId = scienceGroupId, CategoryGroup = "special" },
             new() { Name = "Fan", Emoji = "🔬", Description = "Fizika, kimyo, biologiya", LanguageCode = "uz", TranslationGroupId = scienceGroupId, CategoryGroup = "special" },
+            new() { Name = "Science", Emoji = "🔬", Description = "Physics, chemistry, biology", LanguageCode = "en", TranslationGroupId = scienceGroupId, CategoryGroup = "special" },
         };
 
         await context.Categories.AddRangeAsync(categories);
@@ -72,7 +75,7 @@ public static class SeedData
             .Where(c => c.TranslationGroupId == scienceGroupId)
             .ToDictionary(c => c.LanguageCode, c => c.Id);
 
-        // ===== ГЕОГРАФИЯ (18 вопросов x 6 языков = 108 вопросов) =====
+        // ===== ГЕОГРАФИЯ (6 вопросов x 7 языков = 42 вопроса) =====
 
         // Вопрос 1: Столица Франции
         var q1 = Guid.NewGuid();
@@ -84,6 +87,7 @@ public static class SeedData
             new Question { TranslationGroupId = q1, CategoryId = geoCategoryIds["fa"], LanguageCode = "fa", Text = "پایتخت فرانسه کجاست؟", CorrectAnswer = "پاریس", WrongAnswer1 = "لندن", WrongAnswer2 = "برلین", WrongAnswer3 = "مادرید" },
             new Question { TranslationGroupId = q1, CategoryId = geoCategoryIds["de"], LanguageCode = "de", Text = "Was ist die Hauptstadt von Frankreich?", CorrectAnswer = "Paris", WrongAnswer1 = "London", WrongAnswer2 = "Berlin", WrongAnswer3 = "Madrid" },
             new Question { TranslationGroupId = q1, CategoryId = geoCategoryIds["uz"], LanguageCode = "uz", Text = "Fransiyaning poytaxti qaysi?", CorrectAnswer = "Parij", WrongAnswer1 = "London", WrongAnswer2 = "Berlin", WrongAnswer3 = "Madrid" },
+            new Question { TranslationGroupId = q1, CategoryId = geoCategoryIds["en"], LanguageCode = "en", Text = "What is the capital of France?", CorrectAnswer = "Paris", WrongAnswer1 = "London", WrongAnswer2 = "Berlin", WrongAnswer3 = "Madrid" },
         });
 
         // Вопрос 2: Самая длинная река
@@ -96,6 +100,7 @@ public static class SeedData
             new Question { TranslationGroupId = q2, CategoryId = geoCategoryIds["fa"], LanguageCode = "fa", Text = "طولانی‌ترین رودخانه جهان کدام است؟", CorrectAnswer = "نیل", WrongAnswer1 = "آمازون", WrongAnswer2 = "می‌سی‌سی‌پی", WrongAnswer3 = "یانگ‌تسه" },
             new Question { TranslationGroupId = q2, CategoryId = geoCategoryIds["de"], LanguageCode = "de", Text = "Welcher ist der längste Fluss der Welt?", CorrectAnswer = "Nil", WrongAnswer1 = "Amazonas", WrongAnswer2 = "Mississippi", WrongAnswer3 = "Jangtse" },
             new Question { TranslationGroupId = q2, CategoryId = geoCategoryIds["uz"], LanguageCode = "uz", Text = "Dunyodagi eng uzun daryo qaysi?", CorrectAnswer = "Nil", WrongAnswer1 = "Amazonka", WrongAnswer2 = "Missisipi", WrongAnswer3 = "Yanszi" },
+            new Question { TranslationGroupId = q2, CategoryId = geoCategoryIds["en"], LanguageCode = "en", Text = "What is the longest river in the world?", CorrectAnswer = "Nile", WrongAnswer1 = "Amazon", WrongAnswer2 = "Mississippi", WrongAnswer3 = "Yangtze" },
         });
 
         // Вопрос 3: Столица Японии
@@ -108,6 +113,7 @@ public static class SeedData
             new Question { TranslationGroupId = q3, CategoryId = geoCategoryIds["fa"], LanguageCode = "fa", Text = "پایتخت ژاپن کجاست؟", CorrectAnswer = "توکیو", WrongAnswer1 = "کیوتو", WrongAnswer2 = "اوساکا", WrongAnswer3 = "هیروشیما" },
             new Question { TranslationGroupId = q3, CategoryId = geoCategoryIds["de"], LanguageCode = "de", Text = "Was ist die Hauptstadt von Japan?", CorrectAnswer = "Tokio", WrongAnswer1 = "Kyoto", WrongAnswer2 = "Osaka", WrongAnswer3 = "Hiroshima" },
             new Question { TranslationGroupId = q3, CategoryId = geoCategoryIds["uz"], LanguageCode = "uz", Text = "Yaponiyaning poytaxti qaysi?", CorrectAnswer = "Tokio", WrongAnswer1 = "Kioto", WrongAnswer2 = "Osaka", WrongAnswer3 = "Xirosima" },
+            new Question { TranslationGroupId = q3, CategoryId = geoCategoryIds["en"], LanguageCode = "en", Text = "What is the capital of Japan?", CorrectAnswer = "Tokyo", WrongAnswer1 = "Kyoto", WrongAnswer2 = "Osaka", WrongAnswer3 = "Hiroshima" },
         });
 
         // Вопрос 4: Самый большой океан
@@ -120,6 +126,7 @@ public static class SeedData
             new Question { TranslationGroupId = q4, CategoryId = geoCategoryIds["fa"], LanguageCode = "fa", Text = "بزرگترین اقیانوس کدام است؟", CorrectAnswer = "آرام", WrongAnswer1 = "اطلس", WrongAnswer2 = "هند", WrongAnswer3 = "منجمد شمالی" },
             new Question { TranslationGroupId = q4, CategoryId = geoCategoryIds["de"], LanguageCode = "de", Text = "Welcher ist der größte Ozean?", CorrectAnswer = "Pazifik", WrongAnswer1 = "Atlantik", WrongAnswer2 = "Indischer Ozean", WrongAnswer3 = "Arktischer Ozean" },
             new Question { TranslationGroupId = q4, CategoryId = geoCategoryIds["uz"], LanguageCode = "uz", Text = "Eng katta okean qaysi?", CorrectAnswer = "Tinch", WrongAnswer1 = "Atlantika", WrongAnswer2 = "Hind", WrongAnswer3 = "Shimoliy Muz" },
+            new Question { TranslationGroupId = q4, CategoryId = geoCategoryIds["en"], LanguageCode = "en", Text = "Which is the largest ocean?", CorrectAnswer = "Pacific", WrongAnswer1 = "Atlantic", WrongAnswer2 = "Indian", WrongAnswer3 = "Arctic" },
         });
 
         // Вопрос 5: Самая высокая гора
@@ -132,6 +139,7 @@ public static class SeedData
             new Question { TranslationGroupId = q5, CategoryId = geoCategoryIds["fa"], LanguageCode = "fa", Text = "بلندترین کوه جهان کدام است؟", CorrectAnswer = "اورست", WrongAnswer1 = "کی‌۲", WrongAnswer2 = "کلیمانجارو", WrongAnswer3 = "مون‌بلان" },
             new Question { TranslationGroupId = q5, CategoryId = geoCategoryIds["de"], LanguageCode = "de", Text = "Welcher ist der höchste Berg der Welt?", CorrectAnswer = "Everest", WrongAnswer1 = "K2", WrongAnswer2 = "Kilimandscharo", WrongAnswer3 = "Mont Blanc" },
             new Question { TranslationGroupId = q5, CategoryId = geoCategoryIds["uz"], LanguageCode = "uz", Text = "Dunyodagi eng baland tog' qaysi?", CorrectAnswer = "Everest", WrongAnswer1 = "K2", WrongAnswer2 = "Kilimanjaro", WrongAnswer3 = "Monblan" },
+            new Question { TranslationGroupId = q5, CategoryId = geoCategoryIds["en"], LanguageCode = "en", Text = "What is the highest mountain in the world?", CorrectAnswer = "Everest", WrongAnswer1 = "K2", WrongAnswer2 = "Kilimanjaro", WrongAnswer3 = "Mont Blanc" },
         });
 
         // Вопрос 6: Страна в форме сапога
@@ -144,9 +152,10 @@ public static class SeedData
             new Question { TranslationGroupId = q6, CategoryId = geoCategoryIds["fa"], LanguageCode = "fa", Text = "کدام کشور شکل چکمه دارد؟", CorrectAnswer = "ایتالیا", WrongAnswer1 = "یونان", WrongAnswer2 = "اسپانیا", WrongAnswer3 = "پرتغال" },
             new Question { TranslationGroupId = q6, CategoryId = geoCategoryIds["de"], LanguageCode = "de", Text = "Welches Land hat die Form eines Stiefels?", CorrectAnswer = "Italien", WrongAnswer1 = "Griechenland", WrongAnswer2 = "Spanien", WrongAnswer3 = "Portugal" },
             new Question { TranslationGroupId = q6, CategoryId = geoCategoryIds["uz"], LanguageCode = "uz", Text = "Qaysi davlat etik shaklida?", CorrectAnswer = "Italiya", WrongAnswer1 = "Gretsiya", WrongAnswer2 = "Ispaniya", WrongAnswer3 = "Portugaliya" },
+            new Question { TranslationGroupId = q6, CategoryId = geoCategoryIds["en"], LanguageCode = "en", Text = "Which country is shaped like a boot?", CorrectAnswer = "Italy", WrongAnswer1 = "Greece", WrongAnswer2 = "Spain", WrongAnswer3 = "Portugal" },
         });
 
-        // ===== ИСТОРИЯ (6 вопросов x 6 языков = 36 вопросов) =====
+        // ===== ИСТОРИЯ (6 вопросов x 7 языков = 42 вопроса) =====
 
         // Вопрос 7: Начало Второй мировой
         var q7 = Guid.NewGuid();
@@ -158,6 +167,7 @@ public static class SeedData
             new Question { TranslationGroupId = q7, CategoryId = historyCategoryIds["fa"], LanguageCode = "fa", Text = "جنگ جهانی دوم در چه سالی آغاز شد؟", CorrectAnswer = "۱۹۳۹", WrongAnswer1 = "۱۹۴۱", WrongAnswer2 = "۱۹۳۸", WrongAnswer3 = "۱۹۴۰" },
             new Question { TranslationGroupId = q7, CategoryId = historyCategoryIds["de"], LanguageCode = "de", Text = "In welchem Jahr begann der Zweite Weltkrieg?", CorrectAnswer = "1939", WrongAnswer1 = "1941", WrongAnswer2 = "1938", WrongAnswer3 = "1940" },
             new Question { TranslationGroupId = q7, CategoryId = historyCategoryIds["uz"], LanguageCode = "uz", Text = "Ikkinchi jahon urushi qachon boshlangan?", CorrectAnswer = "1939", WrongAnswer1 = "1941", WrongAnswer2 = "1938", WrongAnswer3 = "1940" },
+            new Question { TranslationGroupId = q7, CategoryId = historyCategoryIds["en"], LanguageCode = "en", Text = "In which year did World War II begin?", CorrectAnswer = "1939", WrongAnswer1 = "1941", WrongAnswer2 = "1938", WrongAnswer3 = "1940" },
         });
 
         // Вопрос 8: Первый президент США
@@ -170,6 +180,7 @@ public static class SeedData
             new Question { TranslationGroupId = q8, CategoryId = historyCategoryIds["fa"], LanguageCode = "fa", Text = "اولین رئیس جمهور آمریکا چه کسی بود؟", CorrectAnswer = "جرج واشنگتن", WrongAnswer1 = "آبراهام لینکلن", WrongAnswer2 = "توماس جفرسون", WrongAnswer3 = "بنجامین فرانکلین" },
             new Question { TranslationGroupId = q8, CategoryId = historyCategoryIds["de"], LanguageCode = "de", Text = "Wer war der erste Präsident der USA?", CorrectAnswer = "George Washington", WrongAnswer1 = "Abraham Lincoln", WrongAnswer2 = "Thomas Jefferson", WrongAnswer3 = "Benjamin Franklin" },
             new Question { TranslationGroupId = q8, CategoryId = historyCategoryIds["uz"], LanguageCode = "uz", Text = "AQShning birinchi prezidenti kim edi?", CorrectAnswer = "Jorj Vashington", WrongAnswer1 = "Avraam Linkoln", WrongAnswer2 = "Tomas Jefferson", WrongAnswer3 = "Benjamin Franklin" },
+            new Question { TranslationGroupId = q8, CategoryId = historyCategoryIds["en"], LanguageCode = "en", Text = "Who was the first president of the USA?", CorrectAnswer = "George Washington", WrongAnswer1 = "Abraham Lincoln", WrongAnswer2 = "Thomas Jefferson", WrongAnswer3 = "Benjamin Franklin" },
         });
 
         // Вопрос 9: Падение Берлинской стены
@@ -182,6 +193,7 @@ public static class SeedData
             new Question { TranslationGroupId = q9, CategoryId = historyCategoryIds["fa"], LanguageCode = "fa", Text = "دیوار برلین در چه سالی فروریخت؟", CorrectAnswer = "۱۹۸۹", WrongAnswer1 = "۱۹۹۱", WrongAnswer2 = "۱۹۸۷", WrongAnswer3 = "۱۹۹۰" },
             new Question { TranslationGroupId = q9, CategoryId = historyCategoryIds["de"], LanguageCode = "de", Text = "In welchem Jahr fiel die Berliner Mauer?", CorrectAnswer = "1989", WrongAnswer1 = "1991", WrongAnswer2 = "1987", WrongAnswer3 = "1990" },
             new Question { TranslationGroupId = q9, CategoryId = historyCategoryIds["uz"], LanguageCode = "uz", Text = "Berlin devori qachon qulab tushgan?", CorrectAnswer = "1989", WrongAnswer1 = "1991", WrongAnswer2 = "1987", WrongAnswer3 = "1990" },
+            new Question { TranslationGroupId = q9, CategoryId = historyCategoryIds["en"], LanguageCode = "en", Text = "In which year did the Berlin Wall fall?", CorrectAnswer = "1989", WrongAnswer1 = "1991", WrongAnswer2 = "1987", WrongAnswer3 = "1990" },
         });
 
         // Вопрос 10: Первый полёт в космос
@@ -194,6 +206,7 @@ public static class SeedData
             new Question { TranslationGroupId = q10, CategoryId = historyCategoryIds["fa"], LanguageCode = "fa", Text = "انسان اولین بار در چه سالی به فضا رفت؟", CorrectAnswer = "۱۹۶۱", WrongAnswer1 = "۱۹۵۷", WrongAnswer2 = "۱۹۶۳", WrongAnswer3 = "۱۹۶۹" },
             new Question { TranslationGroupId = q10, CategoryId = historyCategoryIds["de"], LanguageCode = "de", Text = "In welchem Jahr flog der erste Mensch ins All?", CorrectAnswer = "1961", WrongAnswer1 = "1957", WrongAnswer2 = "1963", WrongAnswer3 = "1969" },
             new Question { TranslationGroupId = q10, CategoryId = historyCategoryIds["uz"], LanguageCode = "uz", Text = "Inson birinchi marta kosmosga qachon uchgan?", CorrectAnswer = "1961", WrongAnswer1 = "1957", WrongAnswer2 = "1963", WrongAnswer3 = "1969" },
+            new Question { TranslationGroupId = q10, CategoryId = historyCategoryIds["en"], LanguageCode = "en", Text = "In which year did the first human fly into space?", CorrectAnswer = "1961", WrongAnswer1 = "1957", WrongAnswer2 = "1963", WrongAnswer3 = "1969" },
         });
 
         // Вопрос 11: Открытие Америки
@@ -206,6 +219,7 @@ public static class SeedData
             new Question { TranslationGroupId = q11, CategoryId = historyCategoryIds["fa"], LanguageCode = "fa", Text = "چه کسی آمریکا را کشف کرد؟", CorrectAnswer = "کریستف کلمب", WrongAnswer1 = "آمریگو وسپوچی", WrongAnswer2 = "واسکو دا گاما", WrongAnswer3 = "فرناندو ماژلان" },
             new Question { TranslationGroupId = q11, CategoryId = historyCategoryIds["de"], LanguageCode = "de", Text = "Wer entdeckte Amerika?", CorrectAnswer = "Christoph Kolumbus", WrongAnswer1 = "Amerigo Vespucci", WrongAnswer2 = "Vasco da Gama", WrongAnswer3 = "Ferdinand Magellan" },
             new Question { TranslationGroupId = q11, CategoryId = historyCategoryIds["uz"], LanguageCode = "uz", Text = "Amerikani kim kashf etgan?", CorrectAnswer = "Xristofor Kolumb", WrongAnswer1 = "Amerigo Vespuchchi", WrongAnswer2 = "Vasko da Gama", WrongAnswer3 = "Fernan Magellan" },
+            new Question { TranslationGroupId = q11, CategoryId = historyCategoryIds["en"], LanguageCode = "en", Text = "Who discovered America?", CorrectAnswer = "Christopher Columbus", WrongAnswer1 = "Amerigo Vespucci", WrongAnswer2 = "Vasco da Gama", WrongAnswer3 = "Ferdinand Magellan" },
         });
 
         // Вопрос 12: Французская революция
@@ -218,9 +232,10 @@ public static class SeedData
             new Question { TranslationGroupId = q12, CategoryId = historyCategoryIds["fa"], LanguageCode = "fa", Text = "انقلاب فرانسه چه زمانی رخ داد؟", CorrectAnswer = "۱۷۸۹", WrongAnswer1 = "۱۷۷۶", WrongAnswer2 = "۱۷۹۹", WrongAnswer3 = "۱۸۱۲" },
             new Question { TranslationGroupId = q12, CategoryId = historyCategoryIds["de"], LanguageCode = "de", Text = "Wann fand die Französische Revolution statt?", CorrectAnswer = "1789", WrongAnswer1 = "1776", WrongAnswer2 = "1799", WrongAnswer3 = "1812" },
             new Question { TranslationGroupId = q12, CategoryId = historyCategoryIds["uz"], LanguageCode = "uz", Text = "Fransuz inqilobi qachon bo'lgan?", CorrectAnswer = "1789", WrongAnswer1 = "1776", WrongAnswer2 = "1799", WrongAnswer3 = "1812" },
+            new Question { TranslationGroupId = q12, CategoryId = historyCategoryIds["en"], LanguageCode = "en", Text = "When did the French Revolution occur?", CorrectAnswer = "1789", WrongAnswer1 = "1776", WrongAnswer2 = "1799", WrongAnswer3 = "1812" },
         });
 
-        // ===== НАУКА (6 вопросов x 6 языков = 36 вопросов) =====
+        // ===== НАУКА (6 вопросов x 7 языков = 42 вопроса) =====
 
         // Вопрос 13: Символ золота
         var q13 = Guid.NewGuid();
@@ -232,6 +247,7 @@ public static class SeedData
             new Question { TranslationGroupId = q13, CategoryId = scienceCategoryIds["fa"], LanguageCode = "fa", Text = "نماد شیمیایی طلا چیست؟", CorrectAnswer = "Au", WrongAnswer1 = "Ag", WrongAnswer2 = "Fe", WrongAnswer3 = "Go" },
             new Question { TranslationGroupId = q13, CategoryId = scienceCategoryIds["de"], LanguageCode = "de", Text = "Was ist das chemische Symbol für Gold?", CorrectAnswer = "Au", WrongAnswer1 = "Ag", WrongAnswer2 = "Fe", WrongAnswer3 = "Go" },
             new Question { TranslationGroupId = q13, CategoryId = scienceCategoryIds["uz"], LanguageCode = "uz", Text = "Oltinning kimyoviy belgisi qanday?", CorrectAnswer = "Au", WrongAnswer1 = "Ag", WrongAnswer2 = "Fe", WrongAnswer3 = "Go" },
+            new Question { TranslationGroupId = q13, CategoryId = scienceCategoryIds["en"], LanguageCode = "en", Text = "What is the chemical symbol for gold?", CorrectAnswer = "Au", WrongAnswer1 = "Ag", WrongAnswer2 = "Fe", WrongAnswer3 = "Go" },
         });
 
         // Вопрос 14: Количество планет
@@ -244,6 +260,7 @@ public static class SeedData
             new Question { TranslationGroupId = q14, CategoryId = scienceCategoryIds["fa"], LanguageCode = "fa", Text = "چند سیاره در منظومه شمسی وجود دارد؟", CorrectAnswer = "۸", WrongAnswer1 = "۹", WrongAnswer2 = "۷", WrongAnswer3 = "۱۰" },
             new Question { TranslationGroupId = q14, CategoryId = scienceCategoryIds["de"], LanguageCode = "de", Text = "Wie viele Planeten gibt es im Sonnensystem?", CorrectAnswer = "8", WrongAnswer1 = "9", WrongAnswer2 = "7", WrongAnswer3 = "10" },
             new Question { TranslationGroupId = q14, CategoryId = scienceCategoryIds["uz"], LanguageCode = "uz", Text = "Quyosh tizimida nechta sayyora bor?", CorrectAnswer = "8", WrongAnswer1 = "9", WrongAnswer2 = "7", WrongAnswer3 = "10" },
+            new Question { TranslationGroupId = q14, CategoryId = scienceCategoryIds["en"], LanguageCode = "en", Text = "How many planets are in the Solar System?", CorrectAnswer = "8", WrongAnswer1 = "9", WrongAnswer2 = "7", WrongAnswer3 = "10" },
         });
 
         // Вопрос 15: Теория относительности
@@ -256,6 +273,7 @@ public static class SeedData
             new Question { TranslationGroupId = q15, CategoryId = scienceCategoryIds["fa"], LanguageCode = "fa", Text = "چه کسی نظریه نسبیت را توسعه داد؟", CorrectAnswer = "آلبرت اینشتین", WrongAnswer1 = "آیزاک نیوتن", WrongAnswer2 = "نیکولا تسلا", WrongAnswer3 = "استیون هاوکینگ" },
             new Question { TranslationGroupId = q15, CategoryId = scienceCategoryIds["de"], LanguageCode = "de", Text = "Wer entwickelte die Relativitätstheorie?", CorrectAnswer = "Albert Einstein", WrongAnswer1 = "Isaac Newton", WrongAnswer2 = "Nikola Tesla", WrongAnswer3 = "Stephen Hawking" },
             new Question { TranslationGroupId = q15, CategoryId = scienceCategoryIds["uz"], LanguageCode = "uz", Text = "Nisbiylik nazariyasini kim ishlab chiqqan?", CorrectAnswer = "Albert Eynshteyn", WrongAnswer1 = "Isaak Nyuton", WrongAnswer2 = "Nikola Tesla", WrongAnswer3 = "Stiven Xoking" },
+            new Question { TranslationGroupId = q15, CategoryId = scienceCategoryIds["en"], LanguageCode = "en", Text = "Who developed the theory of relativity?", CorrectAnswer = "Albert Einstein", WrongAnswer1 = "Isaac Newton", WrongAnswer2 = "Nikola Tesla", WrongAnswer3 = "Stephen Hawking" },
         });
 
         // Вопрос 16: Какой газ мы вдыхаем больше всего
@@ -268,6 +286,7 @@ public static class SeedData
             new Question { TranslationGroupId = q16, CategoryId = scienceCategoryIds["fa"], LanguageCode = "fa", Text = "کدام گاز را بیشتر تنفس می‌کنیم؟", CorrectAnswer = "نیتروژن", WrongAnswer1 = "اکسیژن", WrongAnswer2 = "دی‌اکسید کربن", WrongAnswer3 = "هیدروژن" },
             new Question { TranslationGroupId = q16, CategoryId = scienceCategoryIds["de"], LanguageCode = "de", Text = "Welches Gas atmen wir am meisten ein?", CorrectAnswer = "Stickstoff", WrongAnswer1 = "Sauerstoff", WrongAnswer2 = "Kohlendioxid", WrongAnswer3 = "Wasserstoff" },
             new Question { TranslationGroupId = q16, CategoryId = scienceCategoryIds["uz"], LanguageCode = "uz", Text = "Qaysi gazni eng ko'p nafas olamiz?", CorrectAnswer = "Azot", WrongAnswer1 = "Kislorod", WrongAnswer2 = "Karbonat angidrid", WrongAnswer3 = "Vodorod" },
+            new Question { TranslationGroupId = q16, CategoryId = scienceCategoryIds["en"], LanguageCode = "en", Text = "Which gas do we breathe in the most?", CorrectAnswer = "Nitrogen", WrongAnswer1 = "Oxygen", WrongAnswer2 = "Carbon Dioxide", WrongAnswer3 = "Hydrogen" },
         });
 
         // Вопрос 17: Ближайшая планета к Солнцу
@@ -280,6 +299,7 @@ public static class SeedData
             new Question { TranslationGroupId = q17, CategoryId = scienceCategoryIds["fa"], LanguageCode = "fa", Text = "کدام سیاره به خورشید نزدیک‌تر است؟", CorrectAnswer = "عطارد", WrongAnswer1 = "زهره", WrongAnswer2 = "مریخ", WrongAnswer3 = "زمین" },
             new Question { TranslationGroupId = q17, CategoryId = scienceCategoryIds["de"], LanguageCode = "de", Text = "Welcher Planet ist der Sonne am nächsten?", CorrectAnswer = "Merkur", WrongAnswer1 = "Venus", WrongAnswer2 = "Mars", WrongAnswer3 = "Erde" },
             new Question { TranslationGroupId = q17, CategoryId = scienceCategoryIds["uz"], LanguageCode = "uz", Text = "Quyoshga eng yaqin sayyora qaysi?", CorrectAnswer = "Merkuriy", WrongAnswer1 = "Venera", WrongAnswer2 = "Mars", WrongAnswer3 = "Yer" },
+            new Question { TranslationGroupId = q17, CategoryId = scienceCategoryIds["en"], LanguageCode = "en", Text = "Which planet is closest to the Sun?", CorrectAnswer = "Mercury", WrongAnswer1 = "Venus", WrongAnswer2 = "Mars", WrongAnswer3 = "Earth" },
         });
 
         // Вопрос 18: Скорость света
@@ -292,6 +312,7 @@ public static class SeedData
             new Question { TranslationGroupId = q18, CategoryId = scienceCategoryIds["fa"], LanguageCode = "fa", Text = "سرعت نور تقریباً چقدر است؟", CorrectAnswer = "۳۰۰٬۰۰۰ کیلومتر بر ثانیه", WrongAnswer1 = "۱۵۰٬۰۰۰ کیلومتر بر ثانیه", WrongAnswer2 = "۵۰۰٬۰۰۰ کیلومتر بر ثانیه", WrongAnswer3 = "۱٬۰۰۰٬۰۰۰ کیلومتر بر ثانیه" },
             new Question { TranslationGroupId = q18, CategoryId = scienceCategoryIds["de"], LanguageCode = "de", Text = "Wie hoch ist die Lichtgeschwindigkeit ungefähr?", CorrectAnswer = "300.000 km/s", WrongAnswer1 = "150.000 km/s", WrongAnswer2 = "500.000 km/s", WrongAnswer3 = "1.000.000 km/s" },
             new Question { TranslationGroupId = q18, CategoryId = scienceCategoryIds["uz"], LanguageCode = "uz", Text = "Yorug'lik tezligi taxminan qancha?", CorrectAnswer = "300 000 km/s", WrongAnswer1 = "150 000 km/s", WrongAnswer2 = "500 000 km/s", WrongAnswer3 = "1 000 000 km/s" },
+            new Question { TranslationGroupId = q18, CategoryId = scienceCategoryIds["en"], LanguageCode = "en", Text = "What is the speed of light approximately?", CorrectAnswer = "300,000 km/s", WrongAnswer1 = "150,000 km/s", WrongAnswer2 = "500,000 km/s", WrongAnswer3 = "1,000,000 km/s" },
         });
 
         await context.Questions.AddRangeAsync(questions);
