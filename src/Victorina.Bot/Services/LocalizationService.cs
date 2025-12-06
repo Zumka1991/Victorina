@@ -2,7 +2,7 @@ namespace Victorina.Bot.Services;
 
 public static class LocalizationService
 {
-    // Supported languages: ru, hi, pt, fa, de, uz
+    // Supported languages: ru, hi, pt, fa, de, uz, en
     private static readonly Dictionary<string, Dictionary<string, string>> Translations = new()
     {
         ["ru"] = new Dictionary<string, string>
@@ -742,6 +742,129 @@ public static class LocalizationService
             // Misc
             ["player"] = "O'yinchi",
         },
+
+        ["en"] = new Dictionary<string, string>
+        {
+            // Welcome & Menu
+            ["welcome"] = "🎯 *Quiz Game*\n\nChoose an action:",
+            ["select_country"] = "🌍 *Welcome!*\n\nPlease select your country:",
+            ["play_menu"] = "🎮 *Select game mode:*",
+            ["profile_menu"] = "👤 *My Profile*\n\nSelect a section:",
+            ["friends_menu"] = "👥 *Friends*\n\nChoose an action:",
+
+            // Buttons
+            ["btn_play"] = "🎮 Play",
+            ["btn_quick_game"] = "⚡ Quick Game",
+            ["btn_play_with_friend"] = "👤 Play with Friend",
+            ["btn_profile"] = "👤 My Profile",
+            ["btn_statistics"] = "📊 Statistics",
+            ["btn_language"] = "🌐 Language",
+            ["btn_leaders"] = "🏆 Leaders",
+            ["btn_friends"] = "👥 Friends",
+            ["btn_my_friends"] = "📋 My Friends",
+            ["btn_add_friend"] = "➕ Add Friend",
+            ["btn_requests"] = "📩 Requests",
+            ["btn_back"] = "🔙 Back",
+            ["btn_back_to_profile"] = "🔙 To Profile",
+            ["btn_cancel"] = "❌ Cancel",
+            ["btn_leave_game"] = "❌ Leave Game",
+            ["btn_ready"] = "✅ Ready",
+            ["btn_check_opponent"] = "🔄 Check",
+            ["btn_help"] = "❓ Help",
+            ["btn_accept"] = "✅ Accept",
+            ["btn_reject"] = "❌ Reject",
+            ["btn_to_menu"] = "🏠 To Menu",
+
+            // Game
+            ["searching_opponent"] = "🔍 *Searching for opponent...*\n\nPlease wait for someone to join.",
+            ["searching_category"] = "🔍 *Searching for opponent in selected category...*",
+            ["opponent_found"] = "🎮 *Opponent found!*",
+            ["select_category"] = "📚 *Select category:*",
+            ["select_category_friend"] = "📚 *Select category to play with friend:*",
+            ["any_category"] = "🎲 Any category",
+            ["game_starting"] = "🚀 *Game starting!*",
+            ["waiting_opponent"] = "⏳ Waiting for opponent...",
+            ["waiting_ready"] = "✅ You're ready! Waiting for opponent...",
+            ["question"] = "❓ *Question {0}/{1}*",
+            ["correct"] = "✅ Correct!",
+            ["incorrect"] = "❌ Incorrect!",
+            ["correct_answer"] = "Correct answer: *{0}*",
+            ["your_time"] = "⏱ Your time: {0} sec",
+            ["time_up"] = "⏱ *Time's up!*\n\nCorrect answer: *{0}*",
+            ["opponent_answering"] = "⏳ Waiting for opponent's answer...",
+            ["opponent_still_answering"] = "⏳ Opponent is still answering...",
+
+            // Results
+            ["you_won"] = "🏆 You won!",
+            ["you_lost"] = "😔 You lost",
+            ["draw"] = "🤝 Draw!",
+            ["your_result"] = "📊 *Your result:*",
+            ["correct_answers"] = "✅ Correct: {0}",
+            ["time_spent"] = "⏱ Time: {0} sec",
+            ["opponent_result"] = "📊 *Opponent:* {0} {1}",
+            ["win_by_answers"] = "by number of correct answers",
+            ["win_by_time"] = "by time",
+
+            // Statistics
+            ["your_statistics"] = "📊 *Your Statistics*\n\n🎮 Games played: *{0}*\n🏆 Wins: *{1}*\n📈 Win rate: *{2}%*\n✅ Correct answers: *{3}*",
+
+            // Leaderboard
+            ["leaderboard"] = "🏆 *Leaderboard*",
+            ["leaderboard_empty"] = "🏆 *Leaderboard*\n\nNo players with completed games yet.\n\nPlay your first game!",
+            ["your_position"] = "📍 *Your position:* #{0}",
+            ["play_to_rank"] = "📍 Play a game to get ranked!",
+            ["wins"] = "wins",
+            ["games"] = "games",
+
+            // Friends
+            ["no_friends"] = "😔 You don't have any friends yet.\n\nPress «Add Friend» to find players!",
+            ["select_friend"] = "👤 *Select a friend to play:*",
+            ["no_friends_for_game"] = "😔 You don't have any friends yet.\n\nAdd friends first in the «Friends» section!",
+            ["friend_search"] = "🔍 Enter @username or phone number of your friend:",
+            ["friend_not_found"] = "❌ User not found.",
+            ["already_friends"] = "👥 You're already friends!",
+            ["friend_request_sent"] = "✅ Friend request sent!",
+            ["request_exists"] = "⚠️ Request already exists.",
+            ["new_friend_request"] = "📩 You have a new friend request!",
+            ["no_requests"] = "📭 No incoming friend requests.",
+            ["incoming_requests"] = "📩 *Incoming requests:*",
+            ["friend_accepted"] = "✅ You accepted the friend request!",
+            ["friend_rejected"] = "❌ Request rejected.",
+            ["accept_failed"] = "❌ Failed to accept request.",
+
+            // Game invites
+            ["invite_sent"] = "📨 Invitation sent!",
+            ["waiting_response"] = "Waiting for response...",
+            ["click_ready"] = "Click «Ready» when your friend accepts the invitation.",
+            ["game_invite"] = "🎮 *{0}* invites you to play!",
+            ["category_info"] = "\n📚 Category: *{0}*",
+
+            // Language
+            ["language_selection"] = "🌐 *Language Selection*\n\nCurrent language: {0} {1}\n\nSelect interface language:",
+            ["language_changed"] = "✅ Language changed!\n\n{0} {1}",
+
+            // Game cancellation
+            ["game_cancelled"] = "❌ Game cancelled.",
+            ["opponent_left"] = "😔 Opponent left the game.",
+            ["opponent_cancelled"] = "😔 Opponent cancelled the game.",
+            ["active_game_exists"] = "⚠️ You already have an active game!",
+            ["game_not_found"] = "❌ Game not found.",
+
+            // Help
+            ["help"] = "🎯 *Quiz Game* — compete with friends!\n\n🎮 *How to play:*\n1. Press «Play»\n2. Choose quick game or play with a friend\n3. Answer questions faster than your opponent!\n\n🏆 Winner is who gives more correct answers. If tied — who's faster!",
+
+            // Category Groups
+            ["category_groups"] = "📁 *Category sections:*",
+            ["group_general"] = "📚 General",
+            ["group_special"] = "⭐ Special",
+            ["group_popular"] = "🔥 Popular",
+            ["group_my"] = "👤 My Categories",
+            ["group_all"] = "🎲 All Categories",
+            ["no_categories_found"] = "😔 No categories in this section yet.",
+
+            // Misc
+            ["player"] = "Player",
+        },
     };
 
     public static readonly Dictionary<string, (string Flag, string Name)> Languages = new()
@@ -752,6 +875,7 @@ public static class LocalizationService
         ["fa"] = ("🇮🇷", "فارسی"),
         ["de"] = ("🇩🇪", "Deutsch"),
         ["uz"] = ("🇺🇿", "O'zbek"),
+        ["en"] = ("🇬🇧", "English"),
     };
 
     public static readonly Dictionary<string, string> CountryToLanguage = new()
@@ -762,6 +886,10 @@ public static class LocalizationService
         ["IR"] = "fa",  // Iran
         ["DE"] = "de",  // Germany
         ["UZ"] = "uz",  // Uzbekistan
+        ["US"] = "en",  // United States
+        ["GB"] = "en",  // United Kingdom
+        ["CA"] = "en",  // Canada
+        ["AU"] = "en",  // Australia
     };
 
     public static string Get(string languageCode, string key)

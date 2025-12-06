@@ -16,6 +16,7 @@ const LANGUAGES = [
   { code: 'fa', name: 'فارسی', flag: '🇮🇷' },
   { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
   { code: 'uz', name: 'Oʻzbekcha', flag: '🇺🇿' },
+  { code: 'en', name: 'English', flag: '🇬🇧' },
 ];
 
 export default function GenerateQuestionsModal({ isOpen, onClose, categories }: Props) {

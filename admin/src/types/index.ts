@@ -38,6 +38,7 @@ export const SUPPORTED_LANGUAGES = [
   { code: 'fa', name: 'فارسی', flag: '🇮🇷' },
   { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
   { code: 'uz', name: "O'zbek", flag: '🇺🇿' },
+  { code: 'en', name: 'English', flag: '🇬🇧' },
 ] as const;
 
 export interface Stats {
