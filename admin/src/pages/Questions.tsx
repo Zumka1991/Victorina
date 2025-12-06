@@ -4,6 +4,7 @@ import { getQuestions, getCategories, createQuestion, updateQuestion, deleteQues
 import type { Question } from '../types';
 import { SUPPORTED_LANGUAGES } from '../types';
 import GenerateQuestionsModal from '../components/GenerateQuestionsModal';
+import BulkAddQuestionsModal from '../components/BulkAddQuestionsModal';
 
 export default function Questions() {
   const queryClient = useQueryClient();
@@ -18,6 +19,7 @@ export default function Questions() {
   const [translationGroup, setTranslationGroup] = useState<Question[]>([]); // All translations for current question
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     categoryId: 0,
@@ -243,12 +245,15 @@ export default function Questions() {
     <div>
       <div className="page-header">
         <h2>Вопросы</h2>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button className="btn btn-secondary" onClick={() => {
             console.log('Generate AI button clicked');
             setIsGenerateModalOpen(true);
           }}>
             🤖 Generate with AI
+          </button>
+          <button className="btn btn-secondary" onClick={() => setIsBulkModalOpen(true)}>
+            📝 Массовое добавление
           </button>
           <button className="btn btn-primary" onClick={() => openModal()}>
             + Добавить вопрос
@@ -747,6 +752,12 @@ export default function Questions() {
       <GenerateQuestionsModal
         isOpen={isGenerateModalOpen}
         onClose={() => setIsGenerateModalOpen(false)}
+        categories={categories || []}
+      />
+
+      <BulkAddQuestionsModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
         categories={categories || []}
       />
     </div>
