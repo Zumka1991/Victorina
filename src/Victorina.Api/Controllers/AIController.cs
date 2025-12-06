@@ -21,6 +21,175 @@ public class AIController : ControllerBase
         _logger = logger;
     }
 
+    [HttpPost("generate-questions-stream")]
+    public async Task GenerateQuestionsStream([FromBody] GenerateQuestionsRequest request)
+    {
+        Response.Headers.Append("Content-Type", "text/event-stream");
+        Response.Headers.Append("Cache-Control", "no-cache");
+        Response.Headers.Append("Connection", "keep-alive");
+
+        var apiKey = _configuration["DeepSeek:ApiKey"];
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            await SendEvent("error", new { error = "DeepSeek API key not configured" });
+            return;
+        }
+
+        if (request.Count > 50)
+        {
+            await SendEvent("error", new { error = "Maximum 50 questions per request" });
+            return;
+        }
+
+        if (request.Languages.Length > 7)
+        {
+            await SendEvent("error", new { error = "Maximum 7 languages per request" });
+            return;
+        }
+
+        try
+        {
+            var totalQuestions = request.Count * request.Languages.Length;
+            await SendEvent("progress", new {
+                stage = "starting",
+                message = $"Starting generation of {request.Count} questions in {request.Languages.Length} languages (total: {totalQuestions})",
+                progress = 0
+            });
+
+            var prompt = BuildPrompt(request);
+            await SendEvent("progress", new {
+                stage = "requesting",
+                message = "Sending request to DeepSeek AI...",
+                progress = 10
+            });
+
+            var deepSeekRequest = new
+            {
+                model = "deepseek-chat",
+                messages = new[]
+                {
+                    new { role = "system", content = "You are a helpful assistant that generates quiz questions in multiple languages. Always respond with valid JSON only, no additional text." },
+                    new { role = "user", content = prompt }
+                },
+                temperature = 0.9,
+                max_tokens = 8000
+            };
+
+            var requestContent = new StringContent(
+                JsonSerializer.Serialize(deepSeekRequest),
+                Encoding.UTF8,
+                "application/json"
+            );
+
+            _httpClient.DefaultRequestHeaders.Clear();
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+            var startTime = DateTime.UtcNow;
+            await SendEvent("progress", new {
+                stage = "waiting",
+                message = "Waiting for AI response (this may take 30-60 seconds)...",
+                progress = 30
+            });
+
+            var response = await _httpClient.PostAsync(
+                "https://api.deepseek.com/v1/chat/completions",
+                requestContent
+            );
+
+            var elapsed = (DateTime.UtcNow - startTime).TotalSeconds;
+            await SendEvent("progress", new {
+                stage = "received",
+                message = $"Received response in {elapsed:F1}s, parsing questions...",
+                progress = 70
+            });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("DeepSeek API error: {Error}", errorContent);
+                await SendEvent("error", new { error = "DeepSeek API error", details = errorContent });
+                return;
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var deepSeekResponse = JsonSerializer.Deserialize<DeepSeekResponse>(responseContent);
+
+            if (deepSeekResponse?.choices == null || deepSeekResponse.choices.Length == 0)
+            {
+                await SendEvent("error", new { error = "No response from DeepSeek" });
+                return;
+            }
+
+            var content = deepSeekResponse.choices[0].message.content;
+
+            // Clean up the response
+            content = content.Trim();
+            if (content.StartsWith("```json")) content = content.Substring(7);
+            else if (content.StartsWith("```")) content = content.Substring(3);
+            if (content.EndsWith("```")) content = content.Substring(0, content.Length - 3);
+            content = content.Trim();
+
+            await SendEvent("progress", new {
+                stage = "parsing",
+                message = "Parsing generated questions...",
+                progress = 80
+            });
+
+            var generatedQuestions = JsonSerializer.Deserialize<List<GeneratedQuestion>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (generatedQuestions == null || generatedQuestions.Count == 0)
+            {
+                await SendEvent("error", new { error = "No questions generated", rawResponse = content });
+                return;
+            }
+
+            // Log each question
+            var questionGroups = generatedQuestions.GroupBy(q => q.TranslationGroupId).ToList();
+            for (int i = 0; i < questionGroups.Count; i++)
+            {
+                var group = questionGroups[i];
+                var firstQuestion = group.First();
+                var languages = string.Join(", ", group.Select(q => q.LanguageCode));
+
+                await SendEvent("log", new {
+                    message = $"Question {i + 1}/{questionGroups.Count}: \"{firstQuestion.Text}\" [{languages}]",
+                    questionNumber = i + 1,
+                    totalQuestions = questionGroups.Count
+                });
+
+                await Task.Delay(50); // Small delay for smooth UI updates
+            }
+
+            await SendEvent("progress", new {
+                stage = "complete",
+                message = $"Successfully generated {generatedQuestions.Count} questions!",
+                progress = 100
+            });
+
+            await SendEvent("complete", new { questions = generatedQuestions });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating questions");
+            await SendEvent("error", new { error = "Failed to generate questions", details = ex.Message });
+        }
+    }
+
+    private async Task SendEvent(string eventType, object data)
+    {
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+        var json = JsonSerializer.Serialize(data, options);
+        await Response.WriteAsync($"event: {eventType}\n");
+        await Response.WriteAsync($"data: {json}\n\n");
+        await Response.Body.FlushAsync();
+    }
+
     [HttpPost("generate-questions")]
     public async Task<IActionResult> GenerateQuestions([FromBody] GenerateQuestionsRequest request)
     {
@@ -31,14 +200,14 @@ public class AIController : ControllerBase
         }
 
         // Validate reasonable limits to avoid excessive API costs
-        if (request.Count > 10)
+        if (request.Count > 50)
         {
-            return BadRequest(new { error = "Maximum 10 questions per request" });
+            return BadRequest(new { error = "Maximum 50 questions per request" });
         }
 
-        if (request.Languages.Length > 6)
+        if (request.Languages.Length > 7)
         {
-            return BadRequest(new { error = "Maximum 6 languages per request" });
+            return BadRequest(new { error = "Maximum 7 languages per request" });
         }
 
         try

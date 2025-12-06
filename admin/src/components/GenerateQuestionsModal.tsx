@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { generateQuestions, createQuestion, type GeneratedQuestion } from '../services/api';
+import { generateQuestionsStream, createQuestion, type GeneratedQuestion } from '../services/api';
 import type { Category } from '../types';
 
 interface Props {
@@ -27,6 +27,9 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
   const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[] | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState('');
+  const [logs, setLogs] = useState<string[]>([]);
 
   const queryClient = useQueryClient();
 
@@ -78,6 +81,9 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
 
     setIsGenerating(true);
     setError(null);
+    setProgress(0);
+    setProgressMessage('');
+    setLogs([]);
 
     try {
       const categoryName = selectedCategoryId
@@ -85,8 +91,25 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
         : undefined;
 
       console.log('Generating questions:', { count, selectedLanguages, categoryName, difficulty });
-      const questions = await generateQuestions(count, selectedLanguages, categoryName, difficulty);
+
+      const questions = await generateQuestionsStream(
+        count,
+        selectedLanguages,
+        categoryName,
+        difficulty,
+        (event) => {
+          console.log('Event received:', event);
+          if (event.type === 'progress') {
+            setProgress(event.data.progress || 0);
+            setProgressMessage(event.data.message || '');
+          } else if (event.type === 'log') {
+            setLogs(prev => [...prev, event.data.message]);
+          }
+        }
+      );
+
       console.log('Generated questions:', questions);
+      console.log('First question:', questions[0]);
       setGeneratedQuestions(questions);
     } catch (err: any) {
       console.error('Generation error:', err);
@@ -106,6 +129,9 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
   const handleClose = () => {
     setGeneratedQuestions(null);
     setError(null);
+    setProgress(0);
+    setProgressMessage('');
+    setLogs([]);
     onClose();
   };
 
@@ -148,11 +174,14 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
                 <input
                   type="number"
                   min="1"
-                  max="10"
+                  max="50"
                   value={count}
                   onChange={(e) => setCount(parseInt(e.target.value) || 1)}
                   style={{ width: '120px', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
                 />
+                <span style={{ marginLeft: '8px', fontSize: '0.85rem', color: '#666' }}>
+                  (max 50)
+                </span>
               </div>
 
               <div>
@@ -219,6 +248,78 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
                 </div>
               )}
 
+              {isGenerating && (
+                <div style={{ padding: '16px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
+                  {/* Progress Bar */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>
+                        {progressMessage || 'Processing...'}
+                      </span>
+                      <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#3498db' }}>
+                        {progress}%
+                      </span>
+                    </div>
+                    <div style={{
+                      width: '100%',
+                      height: '24px',
+                      background: '#e9ecef',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      position: 'relative'
+                    }}>
+                      <div style={{
+                        width: `${progress}%`,
+                        height: '100%',
+                        background: 'linear-gradient(90deg, #3498db 0%, #2ecc71 100%)',
+                        transition: 'width 0.3s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        paddingRight: '8px'
+                      }}>
+                        {progress > 10 && (
+                          <span style={{ color: 'white', fontSize: '0.75rem', fontWeight: '600' }}>
+                            {progress}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Logs */}
+                  {logs.length > 0 && (
+                    <div style={{
+                      marginTop: '12px',
+                      padding: '12px',
+                      background: '#fff',
+                      borderRadius: '6px',
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      fontSize: '0.85rem',
+                      fontFamily: 'monospace',
+                      border: '1px solid #dee2e6'
+                    }}>
+                      <div style={{ fontWeight: '600', marginBottom: '8px', color: '#495057' }}>
+                        Generated Questions:
+                      </div>
+                      {logs.map((log, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            padding: '4px 0',
+                            color: '#28a745',
+                            borderBottom: idx < logs.length - 1 ? '1px solid #f0f0f0' : 'none'
+                          }}
+                        >
+                          ✓ {log}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={handleGenerate}
@@ -229,6 +330,7 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
                 </button>
                 <button
                   onClick={handleClose}
+                  disabled={isGenerating}
                   className="btn btn-secondary"
                 >
                   Cancel

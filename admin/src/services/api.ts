@@ -77,6 +77,80 @@ export const generateQuestions = (count: number, languages: string[], categoryNa
     difficulty
   }).then(res => res.data);
 
+export interface GenerationEvent {
+  type: 'progress' | 'log' | 'complete' | 'error';
+  data: any;
+}
+
+export const generateQuestionsStream = async (
+  count: number,
+  languages: string[],
+  categoryName?: string,
+  difficulty?: string,
+  onEvent?: (event: GenerationEvent) => void
+): Promise<GeneratedQuestion[]> => {
+  return new Promise((resolve, reject) => {
+    const url = `${API_URL}/api/ai/generate-questions-stream`;
+
+    // We need to use fetch with POST instead of EventSource (which only supports GET)
+    // Let's use a different approach with fetch and streaming
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        count,
+        languages,
+        categoryName,
+        difficulty
+      })
+    }).then(async response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      if (!reader) {
+        throw new Error('Response body is null');
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          const [eventLine, dataLine] = line.split('\n');
+          if (!eventLine.startsWith('event:') || !dataLine.startsWith('data:')) continue;
+
+          const eventType = eventLine.substring(7).trim();
+          const data = JSON.parse(dataLine.substring(6));
+
+          if (eventType === 'complete') {
+            resolve(data.questions);
+            return;
+          } else if (eventType === 'error') {
+            reject(new Error(data.error || data.details || 'Unknown error'));
+            return;
+          } else {
+            onEvent?.({ type: eventType as any, data });
+          }
+        }
+      }
+    }).catch(reject);
+  });
+};
+
 // Stats
 export const getStats = () =>
   api.get<Stats>('/api/stats').then(res => res.data);

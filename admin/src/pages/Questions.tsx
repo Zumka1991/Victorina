@@ -325,8 +325,8 @@ export default function Questions() {
 
                   return (
                     <tr key={question.id}>
-                      <td>{question.text}</td>
-                      <td>
+                      <td data-label="Вопрос">{question.text}</td>
+                      <td data-label="Переводы">
                         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
                           {/* Show existing translations */}
                           {SUPPORTED_LANGUAGES.filter(l => existingLangs.includes(l.code)).map(l => (
@@ -372,13 +372,13 @@ export default function Questions() {
                           )}
                         </div>
                       </td>
-                      <td>
+                      <td data-label="Категория">
                         <span className="badge">{question.category}</span>
                       </td>
-                      <td style={{ color: '#27ae60', fontWeight: 500 }}>
+                      <td data-label="Ответ" style={{ color: '#27ae60', fontWeight: 500 }}>
                         {question.correctAnswer}
                       </td>
-                      <td>
+                      <td data-label="Картинка">
                         {question.imageUrl ? (
                           <img
                             src={getFullImageUrl(question.imageUrl)}
@@ -389,7 +389,7 @@ export default function Questions() {
                           <span style={{ color: '#999' }}>—</span>
                         )}
                       </td>
-                      <td>
+                      <td data-label="Действия">
                         <div className="actions">
                           <button
                             className="btn btn-sm btn-secondary"
