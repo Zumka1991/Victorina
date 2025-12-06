@@ -1,11 +1,10 @@
 import axios from 'axios';
 import type { Category, Question, Stats, GameSetting, PaginatedResponse, LeaderboardPlayer } from '../types';
 
-// Always use relative path - nginx will proxy /api/ to backend
-// This way we don't need to configure API URL at all
-const API_URL = '';
+// Use env variable for local development, empty string for Docker (nginx proxy)
+const API_URL = import.meta.env.VITE_API_URL || '';
 
-console.log('API_URL: Using relative path via nginx proxy');
+console.log('API_URL:', API_URL || 'Using relative path via nginx proxy');
 
 const api = axios.create({
   baseURL: API_URL,
