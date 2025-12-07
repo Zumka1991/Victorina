@@ -16,7 +16,7 @@ export default function BulkAddQuestionsModal({ isOpen, onClose, categories }: P
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ success: number; failed: number } | null>(null);
+  const [result, setResult] = useState<{ success: number; failed: number; duplicates?: number } | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -67,8 +67,8 @@ export default function BulkAddQuestionsModal({ isOpen, onClose, categories }: P
         correctIndex: correctIndex - 1, // Convert to 0-based
       });
 
-      // Move to next question (skip 2 empty lines)
-      i += 8;
+      // Move to next question (skip 1 empty line)
+      i += 7;
     }
 
     return questions;
@@ -94,6 +94,7 @@ export default function BulkAddQuestionsModal({ isOpen, onClose, categories }: P
 
       let success = 0;
       let failed = 0;
+      let duplicates = 0;
 
       for (const q of questions) {
         try {
@@ -110,13 +111,19 @@ export default function BulkAddQuestionsModal({ isOpen, onClose, categories }: P
             explanation: undefined,
           });
           success++;
-        } catch (err) {
-          console.error('Failed to add question:', q, err);
-          failed++;
+        } catch (err: any) {
+          // Check if error is due to duplicate question (409 Conflict)
+          if (err.response?.status === 409 || err.message?.includes('Duplicate')) {
+            console.log('Skipping duplicate question:', q.text);
+            duplicates++;
+          } else {
+            console.error('Failed to add question:', q, err);
+            failed++;
+          }
         }
       }
 
-      setResult({ success, failed });
+      setResult({ success, failed, duplicates });
       queryClient.invalidateQueries({ queryKey: ['questions'] });
 
       if (failed === 0) {
@@ -166,7 +173,6 @@ export default function BulkAddQuestionsModal({ isOpen, onClose, categories }: P
 Ответ 4
 1
 
-
 Следующий вопрос?
 ...`}
             </pre>
@@ -174,7 +180,7 @@ export default function BulkAddQuestionsModal({ isOpen, onClose, categories }: P
               • Строка 1: Вопрос<br/>
               • Строки 2-5: Четыре варианта ответа<br/>
               • Строка 6: Номер правильного ответа (1-4)<br/>
-              • Строки 7-8: Пустые строки (разделитель)<br/>
+              • Строка 7: Пустая строка (разделитель)<br/>
             </div>
           </div>
 
@@ -247,8 +253,13 @@ export default function BulkAddQuestionsModal({ isOpen, onClose, categories }: P
           {result && (
             <div style={{ padding: '12px', background: '#d4edda', color: '#155724', borderRadius: '4px', marginBottom: '15px' }}>
               ✅ Успешно добавлено: {result.success}
+              {result.duplicates! > 0 && (
+                <span style={{ display: 'block', marginTop: '4px', color: '#856404' }}>
+                  ⚠️ Пропущено дубликатов: {result.duplicates}
+                </span>
+              )}
               {result.failed > 0 && (
-                <span style={{ display: 'block', marginTop: '4px' }}>
+                <span style={{ display: 'block', marginTop: '4px', color: '#721c24' }}>
                   ❌ Ошибок: {result.failed}
                 </span>
               )}

@@ -4,9 +4,9 @@ namespace Victorina.Application.Interfaces;
 
 public interface IQuestionService
 {
-    Task<IList<Question>> GetRandomQuestionsAsync(int count, int? categoryId = null, string languageCode = "ru");
-    Task<Dictionary<string, List<Question>>> GetQuestionsWithTranslationsAsync(int count, IEnumerable<string> languageCodes, int? categoryId = null);
-    Task<Dictionary<string, List<Question>>> GetQuestionsForMultipleLanguagesAsync(int count, IEnumerable<string> languageCodes, int? categoryId = null);
+    Task<IList<Question>> GetRandomQuestionsAsync(int count, int? categoryId = null, string languageCode = "ru", int? userId = null);
+    Task<Dictionary<string, List<Question>>> GetQuestionsWithTranslationsAsync(int count, IEnumerable<string> languageCodes, int? categoryId = null, int? userId = null);
+    Task<Dictionary<string, List<Question>>> GetQuestionsForMultipleLanguagesAsync(int count, IEnumerable<string> languageCodes, int? categoryId = null, int? userId = null);
     Task<IList<Category>> GetCategoriesAsync(string languageCode = "ru");
     Task<IList<Category>> GetCategoriesByGroupAsync(string categoryGroup, string languageCode = "ru");
     Task<IList<Category>> GetUserCategoriesAsync(long telegramId, string languageCode = "ru");

@@ -41,31 +41,50 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
         ? categories.find(c => c.id === selectedCategoryId)
         : null;
 
-      const promises = questions.map(q => {
-        // Find the category for this language that matches the selected category's translation group
-        let categoryId = selectedCategoryId!;
-        if (selectedCategory?.translationGroupId) {
-          const translatedCategory = categories.find(c =>
-            c.languageCode === q.languageCode &&
-            c.translationGroupId === selectedCategory.translationGroupId
-          );
-          categoryId = translatedCategory?.id || selectedCategoryId!;
-        }
+      const results = [];
+      let success = 0;
+      let duplicates = 0;
+      let failed = 0;
 
-        return createQuestion({
-          text: q.text,
-          correctAnswer: q.correctAnswer,
-          wrongAnswer1: q.wrongAnswer1,
-          wrongAnswer2: q.wrongAnswer2,
-          wrongAnswer3: q.wrongAnswer3,
-          explanation: q.explanation || undefined,
-          categoryId: categoryId,
-          languageCode: q.languageCode,
-          translationGroupId: q.translationGroupId,
-          imageUrl: undefined,
-        });
-      });
-      return Promise.all(promises);
+      for (const q of questions) {
+        try {
+          // Find the category for this language that matches the selected category's translation group
+          let categoryId = selectedCategoryId!;
+          if (selectedCategory?.translationGroupId) {
+            const translatedCategory = categories.find(c =>
+              c.languageCode === q.languageCode &&
+              c.translationGroupId === selectedCategory.translationGroupId
+            );
+            categoryId = translatedCategory?.id || selectedCategoryId!;
+          }
+
+          await createQuestion({
+            text: q.text,
+            correctAnswer: q.correctAnswer,
+            wrongAnswer1: q.wrongAnswer1,
+            wrongAnswer2: q.wrongAnswer2,
+            wrongAnswer3: q.wrongAnswer3,
+            explanation: q.explanation || undefined,
+            categoryId: categoryId,
+            languageCode: q.languageCode,
+            translationGroupId: q.translationGroupId,
+            imageUrl: undefined,
+          });
+          success++;
+        } catch (err: any) {
+          // Check if error is due to duplicate question (409 Conflict)
+          if (err.response?.status === 409 || err.message?.includes('Duplicate')) {
+            console.log('Skipping duplicate question:', q.text);
+            duplicates++;
+          } else {
+            console.error('Failed to add question:', q, err);
+            failed++;
+          }
+        }
+      }
+
+      console.log(`Saved questions: ${success} success, ${duplicates} duplicates, ${failed} failed`);
+      return { success, duplicates, failed };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['questions'] });

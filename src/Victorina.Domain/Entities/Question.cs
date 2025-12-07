@@ -23,4 +23,9 @@ public class Question
         var answers = new[] { CorrectAnswer, WrongAnswer1, WrongAnswer2, WrongAnswer3 };
         return answers.OrderBy(_ => Random.Shared.Next()).ToArray();
     }
+
+    public string[] GetAllAnswers()
+    {
+        return new[] { CorrectAnswer, WrongAnswer1, WrongAnswer2, WrongAnswer3 };
+    }
 }

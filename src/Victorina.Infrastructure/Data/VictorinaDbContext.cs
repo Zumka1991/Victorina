@@ -18,6 +18,7 @@ public class VictorinaDbContext : DbContext
     public DbSet<GameQuestion> GameQuestions => Set<GameQuestion>();
     public DbSet<GameAnswer> GameAnswers => Set<GameAnswer>();
     public DbSet<GameSettings> GameSettings => Set<GameSettings>();
+    public DbSet<UserQuestionHistory> UserQuestionHistories => Set<UserQuestionHistory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -137,6 +138,18 @@ public class VictorinaDbContext : DbContext
         {
             entity.HasIndex(e => e.Key).IsUnique();
             entity.Property(e => e.Key).HasMaxLength(100);
+        });
+
+        // UserQuestionHistory
+        modelBuilder.Entity<UserQuestionHistory>(entity =>
+        {
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.UserId, e.QuestionTranslationGroupId });
+            entity.HasIndex(e => e.ShownAt);
         });
 
         // Seed default settings

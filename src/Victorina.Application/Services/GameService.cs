@@ -52,7 +52,7 @@ public class GameService : IGameService
 
         var settings = await GetGameSettingsAsync();
         // Load questions in player's language
-        var questions = await _questionService.GetRandomQuestionsAsync(settings.QuestionsCount, categoryId, user.LanguageCode);
+        var questions = await _questionService.GetRandomQuestionsAsync(settings.QuestionsCount, categoryId, user.LanguageCode, user.Id);
 
         string? categoryName = null;
         Guid? categoryTranslationGroupId = null;
@@ -177,7 +177,7 @@ public class GameService : IGameService
 
         // Load questions for creator first
         var creatorQuestions = (await _questionService.GetRandomQuestionsAsync(
-            settings.QuestionsCount, categoryId, creator.LanguageCode)).ToList();
+            settings.QuestionsCount, categoryId, creator.LanguageCode, creator.Id)).ToList();
 
         List<Question> friendQuestions;
 
@@ -563,6 +563,9 @@ public class GameService : IGameService
                 game.StartedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
             }
+
+            // Record shown questions for both players to avoid repetition in future games
+            await RecordShownQuestionsAsync(session);
         }
 
         return true;
@@ -967,5 +970,37 @@ public class GameService : IGameService
             int.TryParse(timeSettings?.Value, out var time) ? time : 15,
             int.TryParse(countSettings?.Value, out var count) ? count : 10
         );
+    }
+
+    private async Task RecordShownQuestionsAsync(GameSession session)
+    {
+        var now = DateTime.UtcNow;
+        var historyEntries = new List<UserQuestionHistory>();
+
+        foreach (var player in session.Players.Values)
+        {
+            // Get unique TranslationGroupIds from player's questions
+            var translationGroupIds = player.Questions
+                .Where(q => q.TranslationGroupId.HasValue)
+                .Select(q => q.TranslationGroupId!.Value)
+                .Distinct()
+                .ToList();
+
+            foreach (var groupId in translationGroupIds)
+            {
+                historyEntries.Add(new UserQuestionHistory
+                {
+                    UserId = player.UserId,
+                    QuestionTranslationGroupId = groupId,
+                    ShownAt = now
+                });
+            }
+        }
+
+        if (historyEntries.Count > 0)
+        {
+            _context.UserQuestionHistories.AddRange(historyEntries);
+            await _context.SaveChangesAsync();
+        }
     }
 }

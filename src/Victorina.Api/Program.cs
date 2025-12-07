@@ -297,6 +297,23 @@ app.MapGet("/api/questions", async (VictorinaDbContext db, int? categoryId, stri
 
 app.MapPost("/api/questions", async (VictorinaDbContext db, QuestionDto dto) =>
 {
+    // Check for duplicate question (same text + language + category)
+    var existingQuestion = await db.Questions
+        .FirstOrDefaultAsync(q => q.IsActive &&
+                                  q.Text == dto.Text &&
+                                  q.LanguageCode == (dto.LanguageCode ?? "ru") &&
+                                  q.CategoryId == dto.CategoryId);
+
+    if (existingQuestion != null)
+    {
+        return Results.Conflict(new
+        {
+            Error = "Duplicate question",
+            Message = "A question with this text already exists in this category and language",
+            ExistingQuestionId = existingQuestion.Id
+        });
+    }
+
     // If TranslationGroupId is provided, use it; otherwise generate a new one for this question
     var translationGroupId = !string.IsNullOrEmpty(dto.TranslationGroupId) && Guid.TryParse(dto.TranslationGroupId, out var parsedGuid)
         ? parsedGuid

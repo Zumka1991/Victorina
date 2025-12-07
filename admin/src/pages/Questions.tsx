@@ -64,6 +64,13 @@ export default function Questions() {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       closeModal();
     },
+    onError: (error: any) => {
+      if (error.response?.status === 409) {
+        alert('Такой вопрос уже существует в этой категории и языке!');
+      } else {
+        alert('Ошибка при создании вопроса: ' + (error.message || 'Неизвестная ошибка'));
+      }
+    },
   });
 
   const updateMutation = useMutation({

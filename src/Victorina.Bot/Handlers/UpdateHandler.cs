@@ -145,10 +145,6 @@ public class UpdateHandler
                 replyMarkup: _keyboard.GetCancelReplyKeyboard(lang),
                 cancellationToken: ct);
         }
-        else if (IsRequestsButton(text))
-        {
-            await HandleFriendRequestsReplyAsync(chatId, user.Id, lang, friendshipService, ct);
-        }
         else if (IsCancelButton(text) || IsLeaveGameButton(text))
         {
             var activeGame = await gameService.GetActiveGameAsync(telegramUser.Id);
@@ -589,14 +585,6 @@ public class UpdateHandler
                     {
                         await HandleAnswerAsync(chatId, messageId, telegramId, lang, data, gameService, userService, ct);
                     }
-                    else if (data.StartsWith(CallbackData.AcceptFriend))
-                    {
-                        await HandleAcceptFriendAsync(chatId, messageId, user.Id, lang, data, friendshipService, ct);
-                    }
-                    else if (data.StartsWith(CallbackData.RejectFriend))
-                    {
-                        await HandleRejectFriendAsync(chatId, messageId, user.Id, lang, data, friendshipService, ct);
-                    }
                     else if (data.StartsWith(CallbackData.InviteFriend))
                     {
                         await HandleInviteFriendAsync(chatId, messageId, telegramId, user.Id, lang, data,
@@ -932,6 +920,7 @@ public class UpdateHandler
     {
         using var scope = _serviceProvider.CreateScope();
         var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+        var gameService = scope.ServiceProvider.GetRequiredService<IGameService>();
         var friendshipService = scope.ServiceProvider.GetRequiredService<IFriendshipService>();
 
         _userState.ClearState(telegramId);
@@ -944,42 +933,63 @@ public class UpdateHandler
         {
             await _bot.SendMessage(chatId,
                 LocalizationService.Get(lang, "friend_not_found"),
-                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
+                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
                 cancellationToken: ct);
             return;
         }
 
+        // Check if user or opponent has active game
+        var userGame = await gameService.GetActiveGameAsync(telegramId);
+        if (userGame != null)
+        {
+            await _bot.SendMessage(chatId,
+                LocalizationService.Get(lang, "you_in_game"),
+                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
+                cancellationToken: ct);
+            return;
+        }
+
+        var opponentGame = await gameService.GetActiveGameAsync(foundUser.TelegramId);
+        if (opponentGame != null)
+        {
+            await _bot.SendMessage(chatId,
+                LocalizationService.Get(lang, "opponent_in_game"),
+                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
+                cancellationToken: ct);
+            return;
+        }
+
+        // Automatically add to friends if not already friends
         var areFriends = await friendshipService.AreFriendsAsync(userId, foundUser.Id);
-        if (areFriends)
+        if (!areFriends)
         {
-            await _bot.SendMessage(chatId,
-                LocalizationService.Get(lang, "already_friends"),
-                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
-                cancellationToken: ct);
-            return;
+            // Check if there's a pending request
+            var existingRequest = await friendshipService.SendFriendRequestAsync(userId, foundUser.Id);
+            if (existingRequest != null)
+            {
+                // Auto-accept the friend request immediately
+                await friendshipService.AcceptFriendRequestAsync(existingRequest.Id, foundUser.Id);
+            }
         }
 
-        var request = await friendshipService.SendFriendRequestAsync(userId, foundUser.Id);
-        if (request != null)
-        {
-            await _bot.SendMessage(chatId,
-                LocalizationService.Get(lang, "friend_request_sent"),
-                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
-                cancellationToken: ct);
+        // Send instant game invitation
+        var senderUser = await userService.GetByTelegramIdAsync(telegramId);
+        var senderName = string.IsNullOrEmpty(senderUser?.Username)
+            ? ($"{senderUser?.FirstName} {senderUser?.LastName}".Trim())
+            : ($"@{senderUser?.Username}");
 
-            var foundUserLang = foundUser.LanguageCode;
-            await _bot.SendMessage(foundUser.TelegramId,
-                LocalizationService.Get(foundUserLang, "new_friend_request"),
-                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(foundUserLang),
-                cancellationToken: ct);
-        }
-        else
-        {
-            await _bot.SendMessage(chatId,
-                LocalizationService.Get(lang, "request_exists"),
-                replyMarkup: _keyboard.GetFriendsMenuReplyKeyboard(lang),
-                cancellationToken: ct);
-        }
+        await _bot.SendMessage(chatId,
+            LocalizationService.Get(lang, "game_invitation_sent", senderName, foundUser.FirstName ?? searchQuery),
+            replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
+            cancellationToken: ct);
+
+        // Send category selection to opponent for direct game start
+        var foundUserLang = foundUser.LanguageCode;
+        await SendCategoryGroupSelectionAsync(foundUser.TelegramId, foundUserLang, true, telegramId, ct);
+
+        await _bot.SendMessage(foundUser.TelegramId,
+            LocalizationService.Get(foundUserLang, "game_invite_from", senderName),
+            cancellationToken: ct);
     }
 
     private async Task HandleAcceptFriendAsync(long chatId, int messageId, int userId, string lang, string data,

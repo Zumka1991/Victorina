@@ -53,7 +53,7 @@ public class KeyboardService
         return new ReplyKeyboardMarkup(new[]
         {
             new KeyboardButton[] { LocalizationService.Get(lang, "btn_my_friends") },
-            new KeyboardButton[] { LocalizationService.Get(lang, "btn_add_friend"), LocalizationService.Get(lang, "btn_requests") },
+            new KeyboardButton[] { LocalizationService.Get(lang, "btn_add_friend") },
             new KeyboardButton[] { LocalizationService.Get(lang, "btn_back_to_profile") }
         })
         {
@@ -98,7 +98,6 @@ public class KeyboardService
     {
         return new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_check_opponent"), CallbackData.CheckGame) },
             new[] { InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_cancel"), CallbackData.CancelGame) }
         });
     }
@@ -132,10 +131,8 @@ public class KeyboardService
 
     public InlineKeyboardMarkup GetWaitingOpponentKeyboard(string lang)
     {
-        return new InlineKeyboardMarkup(new[]
-        {
-            new[] { InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_check_opponent"), CallbackData.CheckOpponent) }
-        });
+        // No buttons while waiting for opponent - they will be notified automatically
+        return new InlineKeyboardMarkup(Array.Empty<InlineKeyboardButton[]>());
     }
 
     public InlineKeyboardMarkup GetFriendsListKeyboard(IList<User> friends, string lang)
