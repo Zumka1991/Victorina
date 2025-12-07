@@ -707,6 +707,7 @@ public class UpdateHandler
 
         var emoji = result.IsCorrect ? "✅" : "❌";
         var resultText = $"{emoji} {(result.IsCorrect ? LocalizationService.Get(lang, "correct") : LocalizationService.Get(lang, "incorrect"))}\n\n" +
+            $"*{LocalizationService.Get(lang, "question_label")}:* {currentQuestion.Text}\n\n" +
             LocalizationService.Get(lang, "correct_answer", result.CorrectAnswer) + "\n" +
             LocalizationService.Get(lang, "your_time", (result.TimeMs / 1000.0).ToString("F2"));
 
