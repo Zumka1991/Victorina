@@ -13,6 +13,10 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastActiveAt { get; set; } = DateTime.UtcNow;
 
+    // Bot properties
+    public bool IsBot { get; set; } = false;
+    public BotDifficulty? BotDifficulty { get; set; }
+
     // Статистика
     public int GamesPlayed { get; set; }
     public int GamesWon { get; set; }

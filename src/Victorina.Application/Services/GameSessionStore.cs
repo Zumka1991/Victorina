@@ -69,4 +69,9 @@ public class GameSessionStore
         return _sessions.Values.Where(s =>
             s.Status == Domain.Enums.GameStatus.InProgress);
     }
+
+    public IEnumerable<GameSession> GetAllSessions()
+    {
+        return _sessions.Values;
+    }
 }

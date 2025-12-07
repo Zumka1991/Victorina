@@ -666,6 +666,11 @@ public class UpdateHandler
         {
             foreach (var player in session.Players.Values)
             {
+                // Skip bots - they don't need messages
+                var user = await userService.GetByTelegramIdAsync(player.TelegramId);
+                if (user != null && user.IsBot)
+                    continue;
+
                 // Get first question in player's language
                 var playerQuestion = player.Questions.Count > 0
                     ? player.Questions[0]
@@ -757,6 +762,11 @@ public class UpdateHandler
                 {
                     foreach (var p in session.Players.Values)
                     {
+                        // Skip bots - they don't need messages
+                        var pUser = await userService.GetByTelegramIdAsync(p.TelegramId);
+                        if (pUser != null && pUser.IsBot)
+                            continue;
+
                         // Get question in player's language
                         var playerQuestion = p.Questions.Count > session.CurrentQuestionIndex
                             ? p.Questions[session.CurrentQuestionIndex]
@@ -864,6 +874,11 @@ public class UpdateHandler
     {
         foreach (var playerResult in new[] { result.Player1, result.Player2 })
         {
+            // Skip bots - they don't need messages
+            var user = await userService.GetByTelegramIdAsync(playerResult.TelegramId);
+            if (user != null && user.IsBot)
+                continue;
+
             var lang = await GetUserLanguageAsync(playerResult.TelegramId, userService);
             var isWinner = result.WinnerTelegramId == playerResult.TelegramId;
             var opponent = playerResult == result.Player1 ? result.Player2 : result.Player1;
@@ -898,14 +913,26 @@ public class UpdateHandler
                 var winReason = result.WinReason?.Contains("ответ") == true || result.WinReason?.Contains("answer") == true
                     ? LocalizationService.Get(lang, "win_by_answers")
                     : LocalizationService.Get(lang, "win_by_time");
-                message += $"\n\n_{winReason}_";
+                message += $"\n\n{winReason}";
             }
 
-            await _bot.SendMessage(playerResult.TelegramId,
-                message,
-                parseMode: ParseMode.Markdown,
-                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
-                cancellationToken: ct);
+            try
+            {
+                await _bot.SendMessage(playerResult.TelegramId,
+                    message,
+                    parseMode: ParseMode.Html,
+                    replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
+                    cancellationToken: ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send game results to {TelegramId}", playerResult.TelegramId);
+                // Try without HTML formatting
+                await _bot.SendMessage(playerResult.TelegramId,
+                    message,
+                    replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
+                    cancellationToken: ct);
+            }
         }
     }
 

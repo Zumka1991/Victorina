@@ -30,7 +30,8 @@ public class PlayerResult
 
         var fullName = nameParts.Count > 0 ? string.Join(" ", nameParts) : "Игрок";
 
-        if (!string.IsNullOrEmpty(Username))
+        // Don't show username for bots
+        if (!string.IsNullOrEmpty(Username) && !Username.StartsWith("bot_"))
             return $"{fullName} (@{Username})";
 
         return fullName;

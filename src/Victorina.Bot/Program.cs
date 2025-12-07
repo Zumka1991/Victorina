@@ -34,6 +34,8 @@ builder.Services.AddSingleton<UserStateService>();
 builder.Services.AddSingleton<UpdateHandler>();
 builder.Services.AddHostedService<BotService>();
 builder.Services.AddHostedService<QuestionTimeoutService>();
+builder.Services.AddHostedService<BotMatchmakingNotificationService>();
+builder.Services.AddHostedService<BotGameProgressService>();
 
 var host = builder.Build();
 
