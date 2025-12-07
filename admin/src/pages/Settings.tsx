@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSettings, updateSetting, resetSeedData } from '../services/api';
+import PasswordConfirmModal from '../components/PasswordConfirmModal';
 
 export default function Settings() {
   const queryClient = useQueryClient();
   const [message, setMessage] = useState<string | null>(null);
+  const [showResetModal, setShowResetModal] = useState(false);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -37,9 +39,7 @@ export default function Settings() {
   });
 
   const handleSeedReset = () => {
-    if (window.confirm('Вы уверены? Все текущие вопросы и категории будут удалены и заменены тестовыми данными на 6 языках (ru, hi, pt, fa, de, uz).')) {
-      seedMutation.mutate();
-    }
+    setShowResetModal(true);
   };
 
   const handleChange = (key: string, value: string) => {
@@ -140,6 +140,15 @@ export default function Settings() {
           {seedMutation.isPending ? '⏳ Создание данных...' : '🔄 Пересоздать тестовые данные'}
         </button>
       </div>
+
+      <PasswordConfirmModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onConfirm={() => seedMutation.mutate()}
+        title="Пересоздать тестовые данные"
+        message="ВНИМАНИЕ! Все текущие вопросы и категории будут удалены и заменены тестовыми данными на 6 языках (ru, hi, pt, fa, de, uz). Будет создано 18 категорий и 108 вопросов. Это действие необратимо!"
+        confirmButtonText="Удалить и создать"
+      />
     </div>
   );
 }

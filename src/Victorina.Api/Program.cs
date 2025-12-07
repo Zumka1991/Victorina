@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Victorina.Application;
@@ -129,7 +130,9 @@ app.MapGet("/api/categories", async (VictorinaDbContext db, string? languageCode
 app.MapPost("/api/categories", async (VictorinaDbContext db, CategoryDto dto) =>
 {
     // If TranslationGroupId is provided, use it; otherwise generate a new one
-    var translationGroupId = dto.TranslationGroupId ?? Guid.NewGuid();
+    var translationGroupId = !string.IsNullOrEmpty(dto.TranslationGroupId) && Guid.TryParse(dto.TranslationGroupId, out var parsedGuid)
+        ? parsedGuid
+        : Guid.NewGuid();
 
     var category = new Victorina.Domain.Entities.Category
     {
@@ -165,8 +168,8 @@ app.MapPut("/api/categories/{id}", async (VictorinaDbContext db, int id, Categor
     category.Emoji = dto.Emoji;
     category.LanguageCode = dto.LanguageCode ?? category.LanguageCode;
     category.CategoryGroup = dto.CategoryGroup ?? category.CategoryGroup;
-    if (dto.TranslationGroupId.HasValue)
-        category.TranslationGroupId = dto.TranslationGroupId;
+    if (!string.IsNullOrEmpty(dto.TranslationGroupId) && Guid.TryParse(dto.TranslationGroupId, out var parsedGuid))
+        category.TranslationGroupId = parsedGuid;
     await db.SaveChangesAsync();
     return Results.Ok(new
     {
@@ -295,7 +298,9 @@ app.MapGet("/api/questions", async (VictorinaDbContext db, int? categoryId, stri
 app.MapPost("/api/questions", async (VictorinaDbContext db, QuestionDto dto) =>
 {
     // If TranslationGroupId is provided, use it; otherwise generate a new one for this question
-    var translationGroupId = dto.TranslationGroupId ?? Guid.NewGuid();
+    var translationGroupId = !string.IsNullOrEmpty(dto.TranslationGroupId) && Guid.TryParse(dto.TranslationGroupId, out var parsedGuid)
+        ? parsedGuid
+        : Guid.NewGuid();
 
     var question = new Victorina.Domain.Entities.Question
     {
@@ -343,8 +348,8 @@ app.MapPut("/api/questions/{id}", async (VictorinaDbContext db, int id, Question
     question.Explanation = dto.Explanation;
     question.ImageUrl = dto.ImageUrl;
     question.LanguageCode = dto.LanguageCode ?? question.LanguageCode;
-    if (dto.TranslationGroupId.HasValue)
-        question.TranslationGroupId = dto.TranslationGroupId;
+    if (!string.IsNullOrEmpty(dto.TranslationGroupId) && Guid.TryParse(dto.TranslationGroupId, out var parsedGuid))
+        question.TranslationGroupId = parsedGuid;
     await db.SaveChangesAsync();
     return Results.Ok(question);
 }).WithTags("Questions");
@@ -510,12 +515,183 @@ app.MapPost("/api/seed/reset", async (VictorinaDbContext db) =>
     return Results.Ok(new { Message = "Данные пересозданы!", CategoriesCount = await db.Categories.CountAsync(), QuestionsCount = await db.Questions.CountAsync() });
 }).WithTags("Seed");
 
+// Backup endpoints
+app.MapGet("/api/backup/export", async (VictorinaDbContext db) =>
+{
+    var categories = await db.Categories
+        .Where(c => c.IsActive)
+        .Select(c => new
+        {
+            c.Id,
+            c.Name,
+            c.Description,
+            c.Emoji,
+            c.LanguageCode,
+            c.TranslationGroupId,
+            c.CategoryGroup
+        })
+        .ToListAsync();
+
+    var questions = await db.Questions
+        .Where(q => q.IsActive)
+        .Select(q => new
+        {
+            q.Id,
+            q.CategoryId,
+            q.Text,
+            q.CorrectAnswer,
+            q.WrongAnswer1,
+            q.WrongAnswer2,
+            q.WrongAnswer3,
+            q.Explanation,
+            q.ImageUrl,
+            q.LanguageCode,
+            q.TranslationGroupId
+        })
+        .ToListAsync();
+
+    var backup = new
+    {
+        ExportDate = DateTime.UtcNow,
+        Version = "1.0",
+        Categories = categories,
+        Questions = questions
+    };
+
+    return Results.Ok(backup);
+}).WithTags("Backup");
+
+app.MapPost("/api/backup/import", async (VictorinaDbContext db, HttpRequest request) =>
+{
+    try
+    {
+        using var reader = new StreamReader(request.Body);
+        var json = await reader.ReadToEndAsync();
+        var backup = JsonSerializer.Deserialize<BackupData>(json, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        if (backup == null)
+        {
+            return Results.BadRequest(new { Error = "Invalid backup file" });
+        }
+
+        // Start transaction
+        using var transaction = await db.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Delete all existing data
+            await db.Questions.ExecuteDeleteAsync();
+            await db.Categories.ExecuteDeleteAsync();
+
+            // Reset identity sequences
+            await db.Database.ExecuteSqlRawAsync("ALTER SEQUENCE \"Categories_Id_seq\" RESTART WITH 1");
+            await db.Database.ExecuteSqlRawAsync("ALTER SEQUENCE \"Questions_Id_seq\" RESTART WITH 1");
+
+            // Import categories
+            var categoryIdMap = new Dictionary<int, int>();
+            foreach (var cat in backup.Categories.OrderBy(c => c.Id))
+            {
+                var newCategory = new Victorina.Domain.Entities.Category
+                {
+                    Name = cat.Name,
+                    Description = cat.Description,
+                    Emoji = cat.Emoji,
+                    LanguageCode = cat.LanguageCode ?? "ru",
+                    TranslationGroupId = cat.TranslationGroupId,
+                    CategoryGroup = cat.CategoryGroup,
+                    IsActive = true
+                };
+                db.Categories.Add(newCategory);
+                await db.SaveChangesAsync();
+                categoryIdMap[cat.Id] = newCategory.Id;
+            }
+
+            // Import questions
+            foreach (var q in backup.Questions.OrderBy(q => q.Id))
+            {
+                var newQuestion = new Victorina.Domain.Entities.Question
+                {
+                    CategoryId = categoryIdMap.ContainsKey(q.CategoryId) ? categoryIdMap[q.CategoryId] : q.CategoryId,
+                    Text = q.Text,
+                    CorrectAnswer = q.CorrectAnswer,
+                    WrongAnswer1 = q.WrongAnswer1,
+                    WrongAnswer2 = q.WrongAnswer2,
+                    WrongAnswer3 = q.WrongAnswer3,
+                    Explanation = q.Explanation,
+                    ImageUrl = q.ImageUrl,
+                    LanguageCode = q.LanguageCode ?? "ru",
+                    TranslationGroupId = q.TranslationGroupId,
+                    IsActive = true
+                };
+                db.Questions.Add(newQuestion);
+            }
+
+            await db.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            var categoriesCount = await db.Categories.CountAsync();
+            var questionsCount = await db.Questions.CountAsync();
+
+            return Results.Ok(new
+            {
+                Message = "Backup restored successfully!",
+                CategoriesCount = categoriesCount,
+                QuestionsCount = questionsCount
+            });
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return Results.BadRequest(new { Error = $"Failed to restore backup: {ex.Message}" });
+        }
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { Error = $"Failed to parse backup file: {ex.Message}" });
+    }
+}).WithTags("Backup");
+
 // Map controllers
 app.MapControllers();
 
 app.Run();
 
 // DTOs
-record CategoryDto(string Name, string? Description, string? Emoji, string? LanguageCode, Guid? TranslationGroupId, string? CategoryGroup);
-record QuestionDto(int CategoryId, string Text, string CorrectAnswer, string WrongAnswer1, string WrongAnswer2, string WrongAnswer3, string? Explanation, string? ImageUrl, string? LanguageCode, Guid? TranslationGroupId);
+record CategoryDto(string Name, string? Description, string? Emoji, string? LanguageCode, string? TranslationGroupId, string? CategoryGroup);
+record QuestionDto(int CategoryId, string Text, string CorrectAnswer, string WrongAnswer1, string WrongAnswer2, string WrongAnswer3, string? Explanation, string? ImageUrl, string? LanguageCode, string? TranslationGroupId);
 record SettingDto(string Value);
+
+// Backup DTOs
+record BackupData(
+    DateTime ExportDate,
+    string Version,
+    List<BackupCategory> Categories,
+    List<BackupQuestion> Questions
+);
+
+record BackupCategory(
+    int Id,
+    string Name,
+    string? Description,
+    string? Emoji,
+    string? LanguageCode,
+    Guid TranslationGroupId,
+    string? CategoryGroup
+);
+
+record BackupQuestion(
+    int Id,
+    int CategoryId,
+    string Text,
+    string CorrectAnswer,
+    string WrongAnswer1,
+    string WrongAnswer2,
+    string WrongAnswer3,
+    string? Explanation,
+    string? ImageUrl,
+    string? LanguageCode,
+    Guid TranslationGroupId
+);

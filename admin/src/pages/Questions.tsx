@@ -5,6 +5,7 @@ import type { Question } from '../types';
 import { SUPPORTED_LANGUAGES } from '../types';
 import GenerateQuestionsModal from '../components/GenerateQuestionsModal';
 import BulkAddQuestionsModal from '../components/BulkAddQuestionsModal';
+import AutoTranslateModal from '../components/AutoTranslateModal';
 
 export default function Questions() {
   const queryClient = useQueryClient();
@@ -20,6 +21,7 @@ export default function Questions() {
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [isTranslateModalOpen, setIsTranslateModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     categoryId: 0,
@@ -254,6 +256,9 @@ export default function Questions() {
           </button>
           <button className="btn btn-secondary" onClick={() => setIsBulkModalOpen(true)}>
             📝 Массовое добавление
+          </button>
+          <button className="btn btn-secondary" onClick={() => setIsTranslateModalOpen(true)}>
+            🌐 Перевести вопросы
           </button>
           <button className="btn btn-primary" onClick={() => openModal()}>
             + Добавить вопрос
@@ -759,6 +764,11 @@ export default function Questions() {
         isOpen={isBulkModalOpen}
         onClose={() => setIsBulkModalOpen(false)}
         categories={categories || []}
+      />
+
+      <AutoTranslateModal
+        isOpen={isTranslateModalOpen}
+        onClose={() => setIsTranslateModalOpen(false)}
       />
     </div>
   );

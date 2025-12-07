@@ -30,6 +30,7 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
+  const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(new Set());
 
   const queryClient = useQueryClient();
 
@@ -111,6 +112,10 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
       console.log('Generated questions:', questions);
       console.log('First question:', questions[0]);
       setGeneratedQuestions(questions);
+
+      // Select all questions by default
+      const allGroupIds = new Set(questions.map(q => q.translationGroupId));
+      setSelectedQuestions(allGroupIds);
     } catch (err: any) {
       console.error('Generation error:', err);
       const errorMsg = err.response?.data?.error || err.response?.data?.details || err.message || 'Failed to generate questions';
@@ -122,8 +127,33 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
 
   const handleSave = () => {
     if (generatedQuestions) {
-      saveMutation.mutate(generatedQuestions);
+      // Only save selected questions
+      const questionsToSave = generatedQuestions.filter(q => selectedQuestions.has(q.translationGroupId));
+      saveMutation.mutate(questionsToSave);
     }
+  };
+
+  const toggleQuestion = (groupId: string) => {
+    setSelectedQuestions(prev => {
+      const next = new Set(prev);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (generatedQuestions) {
+      const allGroupIds = new Set(generatedQuestions.map(q => q.translationGroupId));
+      setSelectedQuestions(allGroupIds);
+    }
+  };
+
+  const deselectAll = () => {
+    setSelectedQuestions(new Set());
   };
 
   const handleClose = () => {
@@ -132,6 +162,7 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
     setProgress(0);
     setProgressMessage('');
     setLogs([]);
+    setSelectedQuestions(new Set());
     onClose();
   };
 
@@ -339,12 +370,52 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Select/Deselect buttons */}
+              <div style={{ display: 'flex', gap: '10px', padding: '12px', background: '#f8f9fa', borderRadius: '8px' }}>
+                <button onClick={selectAll} className="btn btn-secondary" style={{ fontSize: '0.9rem' }}>
+                  ✓ Select All
+                </button>
+                <button onClick={deselectAll} className="btn btn-secondary" style={{ fontSize: '0.9rem' }}>
+                  ✗ Deselect All
+                </button>
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', fontWeight: '500' }}>
+                  Selected: {selectedQuestions.size} / {Object.keys(groupedQuestions || {}).length}
+                </div>
+              </div>
+
               {/* Preview generated questions */}
-              {Object.entries(groupedQuestions || {}).map(([groupId, questions], idx) => (
-                <div key={groupId} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '16px' }}>
-                  <h3 style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '12px' }}>
-                    Question {idx + 1}
-                  </h3>
+              {Object.entries(groupedQuestions || {}).map(([groupId, questions], idx) => {
+                const isSelected = selectedQuestions.has(groupId);
+                return (
+                  <div
+                    key={groupId}
+                    style={{
+                      border: `2px solid ${isSelected ? '#27ae60' : '#ddd'}`,
+                      borderRadius: '8px',
+                      padding: '16px',
+                      background: isSelected ? '#f0fff4' : 'white',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => toggleQuestion(groupId)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleQuestion(groupId)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          marginRight: '12px',
+                          cursor: 'pointer'
+                        }}
+                      />
+                      <h3 style={{ fontWeight: 'bold', fontSize: '1.1rem', margin: 0 }}>
+                        Question {idx + 1}
+                      </h3>
+                    </div>
                   {questions.map(q => {
                     const lang = LANGUAGES.find(l => l.code === q.languageCode);
                     return (
@@ -369,17 +440,18 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
                       </div>
                     );
                   })}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
 
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={handleSave}
-                  disabled={saveMutation.isPending}
+                  disabled={saveMutation.isPending || selectedQuestions.size === 0}
                   className="btn"
                   style={{ background: '#27ae60', color: 'white' }}
                 >
-                  {saveMutation.isPending ? 'Saving...' : 'Save All Questions'}
+                  {saveMutation.isPending ? 'Saving...' : `Save Selected (${selectedQuestions.size})`}
                 </button>
                 <button
                   onClick={() => setGeneratedQuestions(null)}

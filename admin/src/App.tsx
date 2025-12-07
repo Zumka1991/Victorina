@@ -6,6 +6,7 @@ import Categories from './pages/Categories';
 import Questions from './pages/Questions';
 import Leaderboard from './pages/Leaderboard';
 import Settings from './pages/Settings';
+import Backup from './pages/Backup';
 import './App.css';
 
 const queryClient = new QueryClient();
@@ -65,6 +66,15 @@ function App() {
               </li>
               <li>
                 <NavLink
+                  to="/backup"
+                  className={({ isActive }) => isActive ? 'active' : ''}
+                  onClick={closeMobileMenu}
+                >
+                  💾 Бэкап
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
                   to="/settings"
                   className={({ isActive }) => isActive ? 'active' : ''}
                   onClick={closeMobileMenu}
@@ -87,6 +97,7 @@ function App() {
               <Route path="/categories" element={<Categories />} />
               <Route path="/questions" element={<Questions />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/backup" element={<Backup />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>
           </main>

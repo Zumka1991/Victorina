@@ -190,3 +190,73 @@ export const getFullImageUrl = (path: string | undefined | null): string | undef
   if (path.startsWith('http')) return path;
   return `${API_URL}${path}`;
 };
+
+// Translation
+export interface TranslationEvent {
+  type: 'progress' | 'log' | 'complete' | 'error';
+  data: any;
+}
+
+export const autoTranslateQuestions = async (
+  onEvent?: (event: TranslationEvent) => void
+): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const url = `${API_URL}/api/translation/auto-translate`;
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    }).then(async response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      if (!reader) {
+        throw new Error('Response body is null');
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          const [eventLine, dataLine] = line.split('\n');
+          if (!eventLine.startsWith('event:') || !dataLine.startsWith('data:')) continue;
+
+          const eventType = eventLine.substring(7).trim();
+          const data = JSON.parse(dataLine.substring(6));
+
+          if (eventType === 'complete') {
+            resolve();
+            return;
+          } else if (eventType === 'error') {
+            reject(new Error(data.error || 'Unknown error'));
+            return;
+          } else {
+            onEvent?.({ type: eventType as any, data });
+          }
+        }
+      }
+    }).catch(reject);
+  });
+};
+
+// Backup
+export const exportBackup = () =>
+  api.get('/api/backup/export').then(res => res.data);
+
+export const importBackup = (backupData: any) =>
+  api.post('/api/backup/import', backupData).then(res => res.data);

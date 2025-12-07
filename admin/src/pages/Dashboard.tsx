@@ -1,10 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getStats, seedData, resetSeedData } from '../services/api';
 import { useState } from 'react';
+import PasswordConfirmModal from '../components/PasswordConfirmModal';
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showSeedModal, setShowSeedModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['stats'],
@@ -86,24 +89,38 @@ export default function Dashboard() {
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             className="btn btn-success"
-            onClick={() => seedMutation.mutate()}
+            onClick={() => setShowSeedModal(true)}
             disabled={seedMutation.isPending}
           >
             {seedMutation.isPending ? 'Добавление...' : '➕ Добавить тестовые данные'}
           </button>
           <button
             className="btn btn-danger"
-            onClick={() => {
-              if (confirm('Удалить все вопросы и категории и создать заново?')) {
-                resetMutation.mutate();
-              }
-            }}
+            onClick={() => setShowResetModal(true)}
             disabled={resetMutation.isPending}
           >
             {resetMutation.isPending ? 'Сброс...' : '🔄 Сбросить и пересоздать'}
           </button>
         </div>
       </div>
+
+      <PasswordConfirmModal
+        isOpen={showSeedModal}
+        onClose={() => setShowSeedModal(false)}
+        onConfirm={() => seedMutation.mutate()}
+        title="Добавить тестовые данные"
+        message="Вы собираетесь добавить тестовые данные в базу. Это действие добавит новые категории и вопросы."
+        confirmButtonText="Добавить"
+      />
+
+      <PasswordConfirmModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onConfirm={() => resetMutation.mutate()}
+        title="Сбросить и пересоздать данные"
+        message="ВНИМАНИЕ! Это действие удалит ВСЕ существующие вопросы и категории и создаст новые тестовые данные. Это действие необратимо!"
+        confirmButtonText="Удалить и пересоздать"
+      />
     </div>
   );
 }
