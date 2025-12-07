@@ -41,7 +41,6 @@ export default function GenerateQuestionsModal({ isOpen, onClose, categories }: 
         ? categories.find(c => c.id === selectedCategoryId)
         : null;
 
-      const results = [];
       let success = 0;
       let duplicates = 0;
       let failed = 0;
