@@ -155,7 +155,12 @@ public class KeyboardService
 
         buttons.Add(new[]
         {
-            InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_back"), CallbackData.Friends)
+            InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_add_friend"), CallbackData.AddFriend)
+        });
+
+        buttons.Add(new[]
+        {
+            InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_back"), CallbackData.BackToMenu)
         });
 
         return new InlineKeyboardMarkup(buttons);
@@ -195,6 +200,18 @@ public class KeyboardService
         return new InlineKeyboardMarkup(new[]
         {
             new[] { InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_to_menu"), CallbackData.BackToMenu) }
+        });
+    }
+
+    public InlineKeyboardMarkup GetGameInviteKeyboard(string lang, int inviterId)
+    {
+        return new InlineKeyboardMarkup(new[]
+        {
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_accept"), $"{CallbackData.AcceptGameInvite}{inviterId}"),
+                InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "btn_reject"), $"{CallbackData.DeclineGameInvite}{inviterId}")
+            }
         });
     }
 

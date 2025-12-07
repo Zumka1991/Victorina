@@ -29,6 +29,8 @@ public static class CallbackData
     public const string Ready = "ready";
     public const string Answer = "answer_";
     public const string CancelGame = "cancel_game";
+    public const string AcceptGameInvite = "accept_invite_";
+    public const string DeclineGameInvite = "decline_invite_";
 
     // Polling
     public const string CheckGame = "check_game";

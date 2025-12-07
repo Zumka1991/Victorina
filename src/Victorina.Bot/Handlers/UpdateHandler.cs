@@ -550,6 +550,14 @@ public class UpdateHandler
                     await SendFriendsMenu(chatId, lang, ct);
                     break;
 
+                case CallbackData.AddFriend:
+                    _userState.SetState(telegramId, UserState.WaitingForFriendSearch);
+                    await _bot.SendMessage(chatId,
+                        LocalizationService.Get(lang, "friend_search"),
+                        replyMarkup: _keyboard.GetCancelReplyKeyboard(lang),
+                        cancellationToken: ct);
+                    break;
+
                 case CallbackData.BackToMenu:
                     _userState.ClearState(telegramId);
                     await SendMainMenu(chatId, lang, ct);
@@ -589,6 +597,14 @@ public class UpdateHandler
                     {
                         await HandleInviteFriendAsync(chatId, messageId, telegramId, user.Id, lang, data,
                             gameService, userService, questionService, ct);
+                    }
+                    else if (data.StartsWith(CallbackData.AcceptGameInvite))
+                    {
+                        await HandleAcceptGameInviteAsync(chatId, messageId, telegramId, user.Id, lang, data, ct);
+                    }
+                    else if (data.StartsWith(CallbackData.DeclineGameInvite))
+                    {
+                        await HandleDeclineGameInviteAsync(chatId, messageId, telegramId, user.Id, lang, data, userService, ct);
                     }
                     break;
             }
@@ -694,8 +710,10 @@ public class UpdateHandler
         var result = await gameService.SubmitAnswerAsync(session.GameId, telegramId, answerIndex);
 
         var emoji = result.IsCorrect ? "✅" : "❌";
+        var userAnswer = currentQuestion.Answers[answerIndex];
         var resultText = $"{emoji} {(result.IsCorrect ? LocalizationService.Get(lang, "correct") : LocalizationService.Get(lang, "incorrect"))}\n\n" +
             $"*{LocalizationService.Get(lang, "question_label")}:* {currentQuestion.Text}\n\n" +
+            LocalizationService.Get(lang, "your_answer", userAnswer) + "\n" +
             LocalizationService.Get(lang, "correct_answer", result.CorrectAnswer) + "\n" +
             LocalizationService.Get(lang, "your_time", (result.TimeMs / 1000.0).ToString("F2"));
 
@@ -963,29 +981,17 @@ public class UpdateHandler
         var areFriends = await friendshipService.AreFriendsAsync(userId, foundUser.Id);
         if (!areFriends)
         {
-            // Check if there's a pending request
-            var existingRequest = await friendshipService.SendFriendRequestAsync(userId, foundUser.Id);
-            if (existingRequest != null)
+            // Create and auto-accept friend request
+            var newRequest = await friendshipService.SendFriendRequestAsync(userId, foundUser.Id);
+            if (newRequest != null)
             {
                 // Auto-accept the friend request immediately
-                await friendshipService.AcceptFriendRequestAsync(existingRequest.Id, foundUser.Id);
+                await friendshipService.AcceptFriendRequestAsync(newRequest.Id, foundUser.Id);
             }
         }
 
-        // Send instant game invitation
-        var senderUser = await userService.GetByTelegramIdAsync(telegramId);
-        var senderName = string.IsNullOrEmpty(senderUser?.Username)
-            ? ($"{senderUser?.FirstName} {senderUser?.LastName}".Trim())
-            : ($"@{senderUser?.Username}");
-
-        // Send category selection to inviter (who initiates the game)
-        await SendCategoryGroupSelectionAsync(chatId, lang, true, foundUser.Id, ct);
-
-        // Notify opponent about the invitation
-        var foundUserLang = foundUser.LanguageCode;
-        await _bot.SendMessage(foundUser.TelegramId,
-            LocalizationService.Get(foundUserLang, "game_invite_from", senderName),
-            cancellationToken: ct);
+        // Show category group selection to the inviter (works for both new and existing friends)
+        await SendCategoryGroupSelectionAsync(chatId, lang, forFriend: true, foundUser.Id, ct);
     }
 
     private async Task HandleAcceptFriendAsync(long chatId, int messageId, int userId, string lang, string data,
@@ -1035,15 +1041,26 @@ public class UpdateHandler
     private async Task HandleSelectCategoryGroupAsync(long chatId, int messageId, long telegramId, string lang,
         string data, IQuestionService questionService, IUserService userService, CancellationToken ct)
     {
+        using var scope = _serviceProvider.CreateScope();
+        var gameService = scope.ServiceProvider.GetRequiredService<IGameService>();
+
         // grp_general, grp_special, grp_popular, grp_my, grp_all
         var groupName = data.Replace(CallbackData.SelectCategoryGroup, "");
 
-        IList<Category> categories;
+        // If "any category" is selected, immediately start quick game with null categoryId
         if (groupName == "all")
         {
-            categories = await questionService.GetCategoriesAsync(lang);
+            await _bot.EditMessageText(chatId, messageId,
+                LocalizationService.Get(lang, "searching_opponent"),
+                parseMode: ParseMode.Markdown,
+                cancellationToken: ct);
+
+            await HandleQuickGameReplyAsync(chatId, telegramId, lang, null, gameService, userService, questionService, ct);
+            return;
         }
-        else if (groupName == "my")
+
+        IList<Category> categories;
+        if (groupName == "my")
         {
             categories = await questionService.GetUserCategoriesAsync(telegramId, lang);
         }
@@ -1073,6 +1090,9 @@ public class UpdateHandler
     private async Task HandleSelectCategoryGroupForFriendAsync(long chatId, int messageId, long telegramId, string lang,
         string data, IQuestionService questionService, IUserService userService, CancellationToken ct)
     {
+        using var scope = _serviceProvider.CreateScope();
+        var gameService = scope.ServiceProvider.GetRequiredService<IGameService>();
+
         // grpf_123_general, grpf_123_special, grpf_123_popular, grpf_123_my, grpf_123_all
         var parts = data.Replace(CallbackData.SelectCategoryGroupForFriend, "").Split('_');
         if (parts.Length < 2) return;
@@ -1080,12 +1100,51 @@ public class UpdateHandler
         var friendId = int.Parse(parts[0]);
         var groupName = parts[1];
 
-        IList<Category> categories;
+        // If "any category" is selected, immediately create game with null categoryId
         if (groupName == "all")
         {
-            categories = await questionService.GetCategoriesAsync(lang);
+            var friend = await userService.GetByIdAsync(friendId);
+            if (friend == null)
+            {
+                await _bot.SendMessage(chatId,
+                    LocalizationService.Get(lang, "friend_not_found"),
+                    replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
+                    cancellationToken: ct);
+                return;
+            }
+
+            var session = await gameService.CreateFriendGameAsync(telegramId, friend.TelegramId, null);
+
+            await _bot.EditMessageText(chatId, messageId,
+                $"{LocalizationService.Get(lang, "invite_sent")}\n\n{LocalizationService.Get(lang, "waiting_response")}",
+                parseMode: ParseMode.Markdown,
+                cancellationToken: ct);
+
+            await _bot.SendMessage(chatId,
+                LocalizationService.Get(lang, "click_ready"),
+                replyMarkup: _keyboard.GetReadyKeyboard(lang),
+                cancellationToken: ct);
+
+            var inviter = await userService.GetByTelegramIdAsync(telegramId);
+            var inviterFlag = CountryService.GetFlag(inviter?.CountryCode);
+            var inviterName = inviter != null
+                ? $"{inviterFlag} {inviter.FirstName ?? ""} {inviter.LastName ?? ""}".Trim()
+                : LocalizationService.Get(lang, "player");
+
+            if (!string.IsNullOrEmpty(inviter?.Username))
+                inviterName += $" (@{inviter.Username})";
+
+            var friendLang = friend.LanguageCode;
+            await _bot.SendMessage(friend.TelegramId,
+                LocalizationService.Get(friendLang, "game_invite", inviterName),
+                parseMode: ParseMode.Markdown,
+                replyMarkup: _keyboard.GetGameInviteKeyboard(friendLang, inviter.Id),
+                cancellationToken: ct);
+            return;
         }
-        else if (groupName == "my")
+
+        IList<Category> categories;
+        if (groupName == "my")
         {
             categories = await questionService.GetUserCategoriesAsync(telegramId, lang);
         }
@@ -1189,8 +1248,64 @@ public class UpdateHandler
         await _bot.SendMessage(friend.TelegramId,
             LocalizationService.Get(friendLang, "game_invite", inviterName) + inviteCategoryInfo,
             parseMode: ParseMode.Markdown,
-            replyMarkup: _keyboard.GetReadyKeyboard(friendLang),
+            replyMarkup: _keyboard.GetGameInviteKeyboard(friendLang, inviter.Id),
             cancellationToken: ct);
+    }
+
+    private async Task HandleAcceptGameInviteAsync(long chatId, int messageId, long telegramId, int userId,
+        string lang, string data, CancellationToken ct)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+
+        var inviterId = int.Parse(data.Replace(CallbackData.AcceptGameInvite, ""));
+
+        await _bot.EditMessageText(chatId, messageId,
+            LocalizationService.Get(lang, "invite_accepted"),
+            cancellationToken: ct);
+
+        await _bot.SendMessage(chatId,
+            LocalizationService.Get(lang, "click_ready"),
+            replyMarkup: _keyboard.GetReadyKeyboard(lang),
+            cancellationToken: ct);
+
+        // Notify the inviter that invitation was accepted
+        var inviter = await userService.GetByIdAsync(inviterId);
+        if (inviter != null)
+        {
+            var inviterLang = inviter.LanguageCode;
+            var accepterUser = await userService.GetByIdAsync(userId);
+            var accepterName = accepterUser?.FirstName ?? LocalizationService.Get(inviterLang, "player");
+
+            await _bot.SendMessage(inviter.TelegramId,
+                LocalizationService.Get(inviterLang, "friend_accepted_invite", accepterName),
+                replyMarkup: _keyboard.GetReadyKeyboard(inviterLang),
+                cancellationToken: ct);
+        }
+    }
+
+    private async Task HandleDeclineGameInviteAsync(long chatId, int messageId, long telegramId, int userId,
+        string lang, string data, IUserService userService, CancellationToken ct)
+    {
+        var inviterId = int.Parse(data.Replace(CallbackData.DeclineGameInvite, ""));
+
+        await _bot.EditMessageText(chatId, messageId,
+            LocalizationService.Get(lang, "invite_declined"),
+            cancellationToken: ct);
+
+        // Notify the inviter that the invitation was declined
+        var inviter = await userService.GetByIdAsync(inviterId);
+        if (inviter != null)
+        {
+            var inviterLang = inviter.LanguageCode;
+            var declinerUser = await userService.GetByIdAsync(userId);
+            var declinerName = declinerUser?.FirstName ?? LocalizationService.Get(inviterLang, "player");
+
+            await _bot.SendMessage(inviter.TelegramId,
+                LocalizationService.Get(inviterLang, "invite_was_declined", declinerName),
+                replyMarkup: _keyboard.GetMainMenuReplyKeyboard(inviterLang),
+                cancellationToken: ct);
+        }
     }
 
     private async Task HandleSelectLanguageAsync(long chatId, int messageId, int userId, string data,
