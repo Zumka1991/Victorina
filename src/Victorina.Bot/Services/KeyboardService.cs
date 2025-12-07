@@ -261,14 +261,6 @@ public class KeyboardService
             },
             new[]
             {
-                InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "group_popular"), $"{prefix}popular")
-            },
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "group_my"), $"{prefix}my")
-            },
-            new[]
-            {
                 InlineKeyboardButton.WithCallbackData(LocalizationService.Get(lang, "group_all"), $"{prefix}all")
             },
             new[]

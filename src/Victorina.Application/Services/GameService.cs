@@ -922,7 +922,7 @@ public class GameService : IGameService
     public async Task<List<LeaderboardEntry>> GetLeaderboardAsync(int count = 10)
     {
         var topPlayers = await _context.Users
-            .Where(u => u.GamesPlayed > 0)
+            .Where(u => u.GamesPlayed > 0 && !u.IsBot)
             .OrderByDescending(u => u.GamesWon)
             .ThenByDescending(u => u.GamesPlayed > 0 ? (double)u.GamesWon / u.GamesPlayed : 0)
             .ThenBy(u => u.GamesPlayed)

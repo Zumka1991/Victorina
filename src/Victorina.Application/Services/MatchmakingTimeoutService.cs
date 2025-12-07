@@ -72,8 +72,8 @@ public class MatchmakingTimeoutService : BackgroundService
                 // Get the first (and only) player
                 var humanPlayer = session.Players.Values.First();
 
-                // Create a bot opponent
-                var botUser = await botService.CreateBotOpponentAsync(humanPlayer.LanguageCode);
+                // Get or create a bot opponent from the pool
+                var botUser = await botService.GetOrCreateBotOpponentAsync(humanPlayer.LanguageCode);
 
                 // Save bot to database using GetOrCreateUserAsync
                 var savedBot = await userService.GetOrCreateUserAsync(
@@ -93,7 +93,7 @@ public class MatchmakingTimeoutService : BackgroundService
 
                 _logger.LogInformation(
                     "Bot {BotName} (difficulty: {Difficulty}) joined game {GameId}",
-                    botUser.FirstName, botUser.BotDifficulty, session.GameId);
+                    savedBot.FirstName, savedBot.BotDifficulty, session.GameId);
             }
             catch (Exception ex)
             {

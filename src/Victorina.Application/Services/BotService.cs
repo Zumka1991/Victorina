@@ -1,16 +1,34 @@
+using Victorina.Application.Interfaces;
 using Victorina.Domain.Entities;
 
 namespace Victorina.Application.Services;
 
 public interface IBotService
 {
-    Task<User> CreateBotOpponentAsync(string languageCode);
+    Task<User> GetOrCreateBotOpponentAsync(string languageCode);
     Task<(bool isCorrect, int answerIndex, int timeMs)> GetBotAnswerAsync(BotDifficulty difficulty, int correctAnswerIndex);
 }
 
 public class BotService : IBotService
 {
     private static readonly Random _random = new Random();
+    private readonly IUserService _userService;
+
+    // Fixed pool of bot IDs to avoid creating infinite bots
+    private static readonly long[] BotTelegramIds =
+    {
+        -1000001, -1000002, -1000003, -1000004, -1000005,
+        -1000006, -1000007, -1000008, -1000009, -1000010,
+        -1000011, -1000012, -1000013, -1000014, -1000015,
+        -1000016, -1000017, -1000018, -1000019, -1000020,
+        -1000021, -1000022, -1000023, -1000024, -1000025,
+        -1000026, -1000027, -1000028, -1000029, -1000030
+    };
+
+    public BotService(IUserService userService)
+    {
+        _userService = userService;
+    }
 
     // Список случайных имен для ботов
     private static readonly Dictionary<string, string[]> BotNames = new()
@@ -66,21 +84,29 @@ public class BotService : IBotService
         }
     };
 
-    public Task<User> CreateBotOpponentAsync(string languageCode)
+    public async Task<User> GetOrCreateBotOpponentAsync(string languageCode)
     {
-        // Выбираем случайную сложность
+        // Pick a random bot from the pool
+        var botTelegramId = BotTelegramIds[_random.Next(BotTelegramIds.Length)];
+
+        // Check if bot already exists
+        var existingBot = await _userService.GetByTelegramIdAsync(botTelegramId);
+        if (existingBot != null)
+        {
+            return existingBot;
+        }
+
+        // Create new bot if doesn't exist
         var difficulties = new[] { BotDifficulty.Easy, BotDifficulty.Medium, BotDifficulty.Hard };
         var difficulty = difficulties[_random.Next(difficulties.Length)];
 
-        // Выбираем случайное имя
         var names = BotNames.ContainsKey(languageCode) ? BotNames[languageCode] : BotNames["en"];
         var firstName = names[_random.Next(names.Length)];
 
-        // Создаем бота с уникальным TelegramId (отрицательный для ботов)
         var bot = new User
         {
-            TelegramId = -_random.Next(1000000, 9999999), // Negative IDs for bots
-            Username = $"bot_{Guid.NewGuid().ToString()[..8]}",
+            TelegramId = botTelegramId,
+            Username = $"bot_{Math.Abs(botTelegramId)}",
             FirstName = firstName,
             LanguageCode = languageCode,
             IsBot = true,
@@ -89,7 +115,7 @@ public class BotService : IBotService
             LastActiveAt = DateTime.UtcNow
         };
 
-        return Task.FromResult(bot);
+        return bot;
     }
 
     public Task<(bool isCorrect, int answerIndex, int timeMs)> GetBotAnswerAsync(

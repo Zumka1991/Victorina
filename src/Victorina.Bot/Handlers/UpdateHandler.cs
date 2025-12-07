@@ -946,6 +946,11 @@ public class UpdateHandler
 
             foreach (var player in session.Players.Values.Where(p => p.TelegramId != telegramId))
             {
+                // Skip bots - they don't need cancel notifications
+                var playerUser = await userService.GetByTelegramIdAsync(player.TelegramId);
+                if (playerUser != null && playerUser.IsBot)
+                    continue;
+
                 var playerLang = await GetUserLanguageAsync(player.TelegramId, userService);
                 await _bot.SendMessage(player.TelegramId,
                     LocalizationService.Get(playerLang, "opponent_cancelled"),
@@ -1206,10 +1211,8 @@ public class UpdateHandler
         var categoryIdStr = data.Replace(CallbackData.SelectCategory, "");
         int? categoryId = int.TryParse(categoryIdStr, out var id) && id > 0 ? id : null;
 
-        await _bot.EditMessageText(chatId, messageId,
-            categoryId.HasValue ? LocalizationService.Get(lang, "searching_category") : LocalizationService.Get(lang, "searching_opponent"),
-            parseMode: ParseMode.Markdown,
-            cancellationToken: ct);
+        // Delete the category selection message
+        await _bot.DeleteMessage(chatId, messageId, cancellationToken: ct);
 
         await HandleQuickGameReplyAsync(chatId, telegramId, lang, categoryId, gameService, userService, questionService, ct);
     }
