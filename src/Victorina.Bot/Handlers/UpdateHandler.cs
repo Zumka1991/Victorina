@@ -978,15 +978,11 @@ public class UpdateHandler
             ? ($"{senderUser?.FirstName} {senderUser?.LastName}".Trim())
             : ($"@{senderUser?.Username}");
 
-        await _bot.SendMessage(chatId,
-            LocalizationService.Get(lang, "game_invitation_sent", senderName, foundUser.FirstName ?? searchQuery),
-            replyMarkup: _keyboard.GetMainMenuReplyKeyboard(lang),
-            cancellationToken: ct);
+        // Send category selection to inviter (who initiates the game)
+        await SendCategoryGroupSelectionAsync(chatId, lang, true, foundUser.Id, ct);
 
-        // Send category selection to opponent for direct game start
+        // Notify opponent about the invitation
         var foundUserLang = foundUser.LanguageCode;
-        await SendCategoryGroupSelectionAsync(foundUser.TelegramId, foundUserLang, true, userId, ct);
-
         await _bot.SendMessage(foundUser.TelegramId,
             LocalizationService.Get(foundUserLang, "game_invite_from", senderName),
             cancellationToken: ct);
