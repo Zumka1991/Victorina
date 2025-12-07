@@ -985,7 +985,7 @@ public class UpdateHandler
 
         // Send category selection to opponent for direct game start
         var foundUserLang = foundUser.LanguageCode;
-        await SendCategoryGroupSelectionAsync(foundUser.TelegramId, foundUserLang, true, telegramId, ct);
+        await SendCategoryGroupSelectionAsync(foundUser.TelegramId, foundUserLang, true, userId, ct);
 
         await _bot.SendMessage(foundUser.TelegramId,
             LocalizationService.Get(foundUserLang, "game_invite_from", senderName),
