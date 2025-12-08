@@ -707,6 +707,15 @@ public class UpdateHandler
 
         // Получаем текущий вопрос до ответа, чтобы знать есть ли картинка
         var currentPlayer = session.Players[telegramId];
+
+        // Validate that questions exist
+        if (session.CurrentQuestionIndex >= session.Questions.Count)
+        {
+            _logger.LogError("Question index {Index} is out of range for game {GameId}. Total questions: {Total}",
+                session.CurrentQuestionIndex, session.GameId, session.Questions.Count);
+            throw new InvalidOperationException($"Question index {session.CurrentQuestionIndex} is out of range for game {session.GameId}");
+        }
+
         var currentQuestion = currentPlayer.Questions.Count > session.CurrentQuestionIndex
             ? currentPlayer.Questions[session.CurrentQuestionIndex]
             : session.Questions[session.CurrentQuestionIndex];
@@ -743,42 +752,47 @@ public class UpdateHandler
         var player = session.Players[telegramId];
         var opponent = session.Players.Values.First(p => p.TelegramId != telegramId);
 
+        // Check if opponent is a bot - if so, BotGameProgressService will handle next question/results
+        var opponentUser = await userService.GetByTelegramIdAsync(opponent.TelegramId);
+        bool isGameWithBot = opponentUser != null && opponentUser.IsBot;
+
         if (player.CurrentQuestionIndex == opponent.CurrentQuestionIndex)
         {
-            if (session.CurrentQuestionIndex + 1 >= session.Questions.Count)
+            // Both players have answered
+            if (!isGameWithBot)
             {
-                var gameResult = await gameService.FinishGameAsync(session.GameId);
-                if (gameResult != null)
+                // For human vs human games, handle here
+                if (session.CurrentQuestionIndex + 1 >= session.Questions.Count)
                 {
-                    await SendGameResultsAsync(gameResult, userService, ct);
-                }
-            }
-            else
-            {
-                await gameService.MoveToNextQuestionAsync(session.GameId);
-                session = await gameService.GetGameByIdAsync(session.GameId);
-
-                if (session != null)
-                {
-                    foreach (var p in session.Players.Values)
+                    var gameResult = await gameService.FinishGameAsync(session.GameId);
+                    if (gameResult != null)
                     {
-                        // Skip bots - they don't need messages
-                        var pUser = await userService.GetByTelegramIdAsync(p.TelegramId);
-                        if (pUser != null && pUser.IsBot)
-                            continue;
+                        await SendGameResultsAsync(gameResult, userService, ct);
+                    }
+                }
+                else
+                {
+                    await gameService.MoveToNextQuestionAsync(session.GameId);
+                    session = await gameService.GetGameByIdAsync(session.GameId);
 
-                        // Get question in player's language
-                        var playerQuestion = p.Questions.Count > session.CurrentQuestionIndex
-                            ? p.Questions[session.CurrentQuestionIndex]
-                            : session.Questions[session.CurrentQuestionIndex];
+                    if (session != null)
+                    {
+                        foreach (var p in session.Players.Values)
+                        {
+                            // Get question in player's language
+                            var playerQuestion = p.Questions.Count > session.CurrentQuestionIndex
+                                ? p.Questions[session.CurrentQuestionIndex]
+                                : session.Questions[session.CurrentQuestionIndex];
 
-                        var pLang = await GetUserLanguageAsync(p.TelegramId, userService);
-                        await Task.Delay(1500, ct);
-                        await SendQuestionAsync(p.TelegramId, pLang, playerQuestion,
-                            session.CurrentQuestionIndex + 1, session.Questions.Count, ct);
+                            var pLang = await GetUserLanguageAsync(p.TelegramId, userService);
+                            await Task.Delay(1500, ct);
+                            await SendQuestionAsync(p.TelegramId, pLang, playerQuestion,
+                                session.CurrentQuestionIndex + 1, session.Questions.Count, ct);
+                        }
                     }
                 }
             }
+            // For bot games, BotGameProgressService will handle sending next question/results
         }
         else
         {
@@ -1082,10 +1096,8 @@ public class UpdateHandler
         // If "any category" is selected, immediately start quick game with null categoryId
         if (groupName == "all")
         {
-            await _bot.EditMessageText(chatId, messageId,
-                LocalizationService.Get(lang, "searching_opponent"),
-                parseMode: ParseMode.Markdown,
-                cancellationToken: ct);
+            // Delete the category selection message
+            await _bot.DeleteMessage(chatId, messageId, cancellationToken: ct);
 
             await HandleQuickGameReplyAsync(chatId, telegramId, lang, null, gameService, userService, questionService, ct);
             return;
